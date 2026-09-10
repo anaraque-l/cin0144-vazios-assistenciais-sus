@@ -23,7 +23,7 @@ o modelo erra** na Etapa 1: os que, pelo perfil, deveriam ter UTI e não têm.
 ## A base
 
 - **Unidade:** município × ano · **Período:** 2014–2023
-- **55.700 instâncias** (5.570 municípios × 10 anos) · **53 atributos**
+- **55.700 instâncias** (5.570 municípios × 10 anos) · **70 atributos**
 - Fontes governamentais abertas: **IBGE** (malha, PIB, área, geometria) e **DATASUS**
   (CNES, SIH, SIM, SINASC). Nenhuma exige cadastro ou chave.
 - Arquivo final: `data/processed/municipio_ano.csv`
@@ -52,6 +52,7 @@ primeira execução tudo vem do cache — não depende mais de rede.
 | [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md) | Cada coluna: tipo, origem, unidade, papel na modelagem. |
 | [`docs/06-como-a-extracao-funciona.md`](docs/06-como-a-extracao-funciona.md) | De onde veio cada número e **como auditar um valor** até o HTML bruto. |
 | [`docs/relatorio-entrega1.md`](docs/relatorio-entrega1.md) | **O relatório da Entrega 1** — descrição da base, EDA, diagnóstico e hipóteses. |
+| [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) | Roteiro da apresentação de ~10 min: slides, falas e perguntas da banca. |
 
 ## Estrutura
 
