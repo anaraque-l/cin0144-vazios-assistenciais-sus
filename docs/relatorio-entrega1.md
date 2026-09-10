@@ -79,9 +79,13 @@ Duas decisões de coleta mudam materialmente o resultado:
 ### 1.3 Dimensões e tipos de variáveis
 
 **55.700 instâncias × 70 atributos**, unidade município × ano, 5.570 municípios
-× 10 anos (2014–2023). A base passou de 53 para 70 colunas com a inclusão de
-saneamento do Censo 2022, equipes e equipamentos do CNES e internação/taxa
-ICSAP por faixa etária (menores de 5 anos e idosos).
+× 10 anos (2014–2023). A base cresceu de 53 para 70 colunas depois da primeira
+versão desta entrega (commit `0496b2b`), com as melhorias M2 (cobertura de
+ESF), M4 (ICSAP por faixa etária), M5 (equipamentos) e M6 (saneamento) de
+[`04-melhorias-tradeoffs-sensibilidades.md`](04-melhorias-tradeoffs-sensibilidades.md).
+A EDA foi reexecutada sobre as 70 colunas em duas rodadas — PR #1 (commit
+`2b0b5a1`) e esta revisão, que acrescenta `dist_hospital_km` e
+`vazio_assistencial` à lista de vazamento.
 
 | Tipo | Qtd. | Exemplos |
 |---|---|---|
@@ -93,10 +97,11 @@ ICSAP por faixa etária (menores de 5 anos e idosos).
 | Quantitativo discreto (contagem) | 27 | `populacao`, `leitos_uti`, `equipes_esf`, `intern_idoso_total` |
 | Quantitativo contínuo | 30 | `pib_per_capita`, `taxa_icsap`, `dist_uti_km`, `pct_esgoto_rede` |
 
-Dos 70, **47 são candidatos a preditor**, 9 são proibidos só por vazamento
-(§3.6), 3 são identificadores e 11 são alvos ou componentes de alvo (as taxas
-ICSAP por faixa etária das Etapas 2b/2c e seus numeradores/denominadores).
-Dicionário completo em [`05-dicionario-de-dados.md`](05-dicionario-de-dados.md).
+Dos 70, **45 são candidatos a preditor**, 11 são proibidos só por vazamento
+(§3.6 — 9 na primeira reexecução, +2 nesta revisão), 3 são identificadores e
+11 são alvos ou componentes de alvo (as taxas ICSAP por faixa etária das
+Etapas 2b/2c e seus numeradores/denominadores). Dicionário completo em
+[`05-dicionario-de-dados.md`](05-dicionario-de-dados.md).
 
 ### 1.4 Tipo de tarefa e variáveis-alvo
 
@@ -319,11 +324,13 @@ aparece como recorte descritivo.
 | Coluna | % ausente | Causa identificada |
 |---|---|---|
 | `vab_*`, `vab_total` | 20,01% | O IBGE ainda **não publicou** a abertura setorial do PIB para 2022 e 2023 |
-| `pct_esgoto_rede` / `pct_agua_rede` / `pct_lixo_coletado` | 0,47% / 0,16% / 0,02% | Os **mesmos 26 / 9 / 1 municípios** sem apuração no Censo 2022, em **todo ano** do painel |
+| `pct_esgoto_rede` | 0,47% (26 municípios) | Fora da cobertura da tabela SIDRA 6805 (Censo 2022) — foto única, repetida nos 10 anos |
+| `pct_agua_rede` | 0,16% (9 municípios) | Idem, tabela SIDRA 6803 — cobertura ligeiramente diferente da 6805 |
+| `taxa_icsap_menor5` | 0,16% (90 município-ano) | `intern_menor5_total = 0` no ano — nenhuma internação de menor de 5 anos registrada; população mediana desses casos é 2.100 hab. (11.499 na base inteira) |
 | `area_km2` | 0,11% (6 municípios) | Municípios instalados **depois do Censo 2010**, fonte da área |
-| `taxa_icsap_menor5` / `taxa_icsap_idoso` | 0,16% / 0,02% | Denominador zero na faixa etária — município-ano sem internação de menor de 5 / idoso residente |
+| `taxa_icsap_idoso` | 0,02% (13 município-ano) | Mesma causa de `taxa_icsap_menor5`, para `intern_idoso_total = 0` |
 | `populacao` | 0,02% (1 município) | Boa Esperança do Norte (MT) não entra na série de estimativas do TCU |
-| 10 taxas derivadas | 0,02% | Propagação do denominador ausente |
+| demais taxas derivadas | 0,02% | Propagação do denominador ausente (população ou contagem zero) |
 
 Os 6 municípios sem área: Mojuí dos Campos (PA), Pescaria Brava (SC), Balneário
 Rincão (SC), Pinto Bandeira (RS), Paraíso das Águas (MS) e Boa Esperança do
@@ -331,11 +338,14 @@ Norte (MT).
 
 **Interpretação.** Nenhum buraco é aleatório, e essa é a informação que importa:
 imputação pela média pressupõe que o valor faltante veio da mesma população que
-os observados. Nos `vab_*` e no saneamento do Censo isso é falso por construção —
-a ausência é o dado não ter sido publicado / apurado, e imputar a média seria
-inventar estatística oficial. Os `NaN` de `taxa_icsap_menor5/idoso` são de outra
-natureza: taxa indefinida por denominador zero, não valor perdido — a mesma
-instabilidade de pequenas áreas da §3.2.
+os observados. Nos `vab_*` (e, pelo mesmo motivo, em `pct_esgoto_rede` e
+`pct_agua_rede`) isso é falso por construção — a ausência é o IBGE não ter
+publicado ou não ter coberto aquele município no Censo, e imputar seria
+inventar estatística oficial. Em `taxa_icsap_menor5`/`taxa_icsap_idoso` a causa
+é outra — denominador zero em município pequeno (mediana de 2.100 habitantes
+nos casos ausentes, contra 11.499 da base inteira) — e é o mesmo fenômeno de
+instabilidade por denominador pequeno discutido em §3.2, só que aqui produz
+`NaN` em vez de apenas inflar a variância.
 
 ### 3.2 Outliers: três naturezas, três tratamentos
 
@@ -389,7 +399,9 @@ anos em **100% dos municípios** (o Censo é foto única replicada por ano), e
 equivale a variância nula — essas colunas não explicam nada da variação
 temporal (o choque de 2020, a tendência de ICSAP) e são colineares com o
 efeito-município; num protocolo agrupado por município elas não ajudam a
-generalizar.
+generalizar. A correlação das três colunas de saneamento com `taxa_icsap`
+também é fraca (ρ entre −0,05 e −0,13, `pct_lixo_coletado` a mais associada) —
+mais fraca até que o gradiente de isolamento geográfico (§2.7).
 
 Redundância severa, com **22 pares de \|ρ\| > 0,90** (contra os ~15 da base de
 53), de três naturezas:
@@ -423,20 +435,41 @@ distintas, que **não devem ser removidas**.
 **Proibidos na Etapa 1** (`tem_uti`): `leitos_uti`, `leitos_complementares`,
 `leitos_internacao`, `leitos_internacao_sus`, `leitos_por_mil_hab`,
 `leitos_sus_por_mil_hab`, `estab_hospital`, `internacoes_total`,
-`tx_internacao_por_mil` e — novo na base de 70 — `equip_manut_vida` (respirador
-e monitor praticamente só existem dentro de UTI).
+`tx_internacao_por_mil`, `equip_manut_vida`, `dist_hospital_km` e
+`vazio_assistencial` — os três últimos acrescentados nesta revisão.
 
 **Proibidos na Etapa 2** (`taxa_icsap`): `internacoes_icsap`,
 `internacoes_total`, `icsap_por_10mil` e — novos na base de 70 — os blocos por
 faixa etária: `taxa_icsap_menor5` e `taxa_icsap_idoso` (o **mesmo alvo** numa
 subpopulação, ρ = 0,65 e 0,84) e seus numeradores/denominadores
-`intern_menor5_icsap/total` e `intern_idoso_icsap/total`.
+`intern_menor5_icsap/total` e `intern_idoso_icsap/total`. As duas taxas por
+faixa etária são bem mais altas que a geral — médias de 39,3% e 38,7% contra
+23,6% — o que é esperado clinicamente (gastroenterite e infecção respiratória
+na infância; diabetes e insuficiência cardíaca na velhice são justamente os
+extremos mais sensíveis à atenção primária) e explica a correlação alta com o
+alvo principal.
 
 Há dois vazamentos óbvios (`leitos_uti` **é** o alvo; `internacoes_*` e as
-`taxa_icsap_*` por faixa **são** o alvo) e um sutil e mais interessante: usar
-volume de internação para prever presença de UTI é **circular** — município com
-UTI interna mais *porque* tem UTI. A seta causal aponta do alvo para o atributo.
-Um modelo assim teria AUC excelente e valor prático zero.
+`taxa_icsap_*` por faixa **são** o alvo), um sutil (usar volume de internação
+para prever presença de UTI é **circular** — município com UTI interna mais
+*porque* tem UTI; a seta causal aponta do alvo para o atributo, e um modelo
+assim teria AUC excelente e valor prático zero) e três identificados numa
+auditoria posterior ao dicionário de dados:
+
+- `equip_manut_vida` (respiradores, monitores): ρ = 0,528 com `tem_uti`,
+  mediana de 300 equipamentos onde há UTI contra 5 onde não há. Não é presença
+  exclusiva — 77,5% dos municípios sem UTI têm ao menos um — mas a diferença de
+  escala é grande demais para ignorar (corrige a leitura inicial de que esse
+  equipamento "só existe dentro de UTI").
+- `dist_hospital_km`: derivado de `leitos_internacao` (já vazamento); ρ = −0,25
+  com `tem_uti` — moderado, não determinístico, mas herda o mesmo problema.
+- `vazio_assistencial`: **definido** usando `tem_uti == 0` (§2.8), circular por
+  construção.
+
+A lista completa vive em `src/fontes.py` (`VAZAMENTO_ETAPA1`/`VAZAMENTO_ETAPA2`)
+como fonte única — o notebook e `docs/05-dicionario-de-dados.md` validam
+automaticamente contra ela, para que a lista nunca mais divirja em silêncio
+entre CLAUDE.md, o notebook e este relatório.
 
 ---
 
@@ -465,9 +498,13 @@ Um modelo assim teria AUC excelente e valor prático zero.
 Cada hipótese decorre de uma evidência acima.
 
 **Valores ausentes.** Não imputar `vab_*` (desafio 5) — usar só `pib_per_capita`
-ou restringir a análise setorial a 2014–2021. Imputar `area_km2` com o valor
-oficial atual do IBGE (os 6 municípios existem, só não existiam em 2010).
-Excluir ou interpolar o município sem população.
+ou restringir a análise setorial a 2014–2021. Pelo mesmo motivo, não imputar
+`pct_esgoto_rede`/`pct_agua_rede` nos 26 municípios fora da cobertura do Censo
+2022. Imputar `area_km2` com o valor oficial atual do IBGE (os 6 municípios
+existem, só não existiam em 2010). Excluir ou interpolar o município sem
+população. Manter `NaN` (não zerar) em `taxa_icsap_menor5`/`taxa_icsap_idoso`
+quando o denominador etário for zero — zerar inventaria uma taxa de 0% onde na
+verdade não houve nenhum caso a taxar.
 
 **Transformação e normalização.** Log₁₀ ou `log1p` nas variáveis de tamanho
 (desafio 1). Padronização obrigatória para kNN, MLP e logística regularizada;
@@ -532,6 +569,11 @@ O que diferencia esta base é que **cada exigência de pré-processamento tem aq
 uma justificativa empírica, e não uma justificativa de checklist**: os valores
 ausentes são estruturados e têm causa identificada, o desbalanceamento é
 genuíno, a redundância entre proxies de tamanho existe de verdade, o vazamento é
-real e fácil de cometer, e a base ainda carrega escala inconsistente e colunas
-constantes no painel — diagnósticos que só apareceram ao reexecutar a EDA sobre
-as 70 colunas.
+real e fácil de cometer — mesmo depois de identificado uma primeira vez, como
+mostrou esta revisão (`equip_manut_vida`, `dist_hospital_km` e
+`vazio_assistencial` só entraram na lista consolidada agora) — e a base ainda
+carrega escala inconsistente e colunas constantes no painel, diagnósticos que
+só apareceram ao reexecutar a EDA sobre as 70 colunas. A lição prática,
+registrada em `src/fontes.py`, é que a lista de vazamento agora tem uma única
+fonte de verdade, validada automaticamente pelo notebook e pelo dicionário de
+dados.

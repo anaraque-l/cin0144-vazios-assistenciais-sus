@@ -37,13 +37,22 @@ pré-processamento são **escritas**, não aplicadas.
 
 ### 3. Vazamento de atributo
 
-Ao mexer em qualquer lista de atributos, releia `docs/04`, seção S2. Resumo:
+A lista canônica é `src/fontes.py` (`VAZAMENTO_ETAPA1`/`VAZAMENTO_ETAPA2`) —
+`src/gerar_dicionario.py` e `notebooks/01-eda.ipynb` validam contra ela com
+`assert`. Ao mexer em qualquer lista de atributos, edite `fontes.py` primeiro
+e releia `docs/04`, seção S2. Resumo (12 + 9 colunas, não repita esta lista de
+cabeça em outro lugar do repositório — ela já divergiu entre CLAUDE.md, o
+notebook e `docs/04` uma vez):
 
 - Etapa 1 (`tem_uti`) não pode usar `leitos_uti`, `leitos_complementares`,
-  `leitos_internacao*`, `estab_hospital`, `internacoes_total`,
-  `tx_internacao_por_mil`.
+  `leitos_internacao`, `leitos_internacao_sus`, `leitos_por_mil_hab`,
+  `leitos_sus_por_mil_hab`, `estab_hospital`, `internacoes_total`,
+  `tx_internacao_por_mil`, `equip_manut_vida`, `dist_hospital_km`,
+  `vazio_assistencial`.
 - Etapa 2 (`taxa_icsap`) não pode usar `internacoes_icsap`, `internacoes_total`,
-  `icsap_por_10mil`.
+  `icsap_por_10mil`, `taxa_icsap_menor5`, `taxa_icsap_idoso`,
+  `intern_menor5_total`, `intern_menor5_icsap`, `intern_idoso_total`,
+  `intern_idoso_icsap` (mesmo alvo por faixa etária).
 
 ### 4. Município de residência, sempre
 
