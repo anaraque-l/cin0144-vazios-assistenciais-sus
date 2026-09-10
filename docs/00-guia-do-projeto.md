@@ -56,8 +56,8 @@ oficial — está em [`03-icsap-operacionalizacao.md`](03-icsap-operacionalizaca
 - **Unidade de análise:** município × ano
 - **Período:** 2014–2023 (10 anos)
 - **Instâncias:** 55.700 (5.570 municípios × 10 anos)
-- **Atributos:** 53 colunas, das quais **36 são candidatas a preditor**
-  (9 são proibidas por vazamento, 3 são identificadores, 4 são alvo ou componente de alvo)
+- **Atributos:** 70 colunas, das quais **47 são candidatas a preditor**
+  (9 são proibidas só por vazamento, 3 são identificadores, 11 são alvo ou componente de alvo)
 - **Formato:** `data/processed/municipio_ano.csv`
 
 Tudo vem de fonte **governamental e aberta**: IBGE (malha municipal, PIB, área,

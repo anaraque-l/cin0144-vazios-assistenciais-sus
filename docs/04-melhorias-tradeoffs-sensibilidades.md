@@ -118,11 +118,12 @@ população diferente daquela que gerou o buraco.
 ### S8 — O básico do enunciado
 
 - [x] Mais de 1.000 instâncias ✔ (55.700)
-- [x] Mais de 10 atributos ✔ (53 colunas, 36 candidatas a preditor)
+- [x] Mais de 10 atributos ✔ (70 colunas, 47 candidatas a preditor)
 - [ ] Tipo de tarefa declarado, com variável-alvo identificada e justificada
 - [ ] **Toda figura acompanhada de interpretação** — o enunciado cobra isso
       explicitamente; é o item mais fácil de perder ponto
-- [ ] Notebook executa do começo ao fim sem erro, com as saídas salvas
+- [x] Notebook executa do começo ao fim sem erro, com as saídas salvas ✔
+      (reexecutado sobre as 70 colunas: 26 células, 11 figuras, sem erro)
 
 ---
 

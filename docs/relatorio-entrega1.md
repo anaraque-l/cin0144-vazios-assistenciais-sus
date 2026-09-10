@@ -78,8 +78,10 @@ Duas decisões de coleta mudam materialmente o resultado:
 
 ### 1.3 Dimensões e tipos de variáveis
 
-**55.700 instâncias × 53 atributos**, unidade município × ano, 5.570 municípios
-× 10 anos (2014–2023).
+**55.700 instâncias × 70 atributos**, unidade município × ano, 5.570 municípios
+× 10 anos (2014–2023). A base passou de 53 para 70 colunas com a inclusão de
+saneamento do Censo 2022, equipes e equipamentos do CNES e internação/taxa
+ICSAP por faixa etária (menores de 5 anos e idosos).
 
 | Tipo | Qtd. | Exemplos |
 |---|---|---|
@@ -88,12 +90,13 @@ Duas decisões de coleta mudam materialmente o resultado:
 | Categórico ordinal | 1 | `porte_populacional` |
 | Binário | 4 | `capital`, `periodo_pandemia`, `tem_uti`, `vazio_assistencial` |
 | Temporal | 1 | `ano` |
-| Quantitativo discreto (contagem) | 18 | `populacao`, `leitos_uti`, `internacoes_total` |
-| Quantitativo contínuo | 22 | `pib_per_capita`, `taxa_icsap`, `dist_uti_km` |
+| Quantitativo discreto (contagem) | 27 | `populacao`, `leitos_uti`, `equipes_esf`, `intern_idoso_total` |
+| Quantitativo contínuo | 30 | `pib_per_capita`, `taxa_icsap`, `dist_uti_km`, `pct_esgoto_rede` |
 
-Dos 53, **36 são candidatos a preditor**, 9 são proibidos por vazamento (§3.6),
-3 são identificadores e 4 são alvos ou componentes de alvo. Dicionário completo
-em [`05-dicionario-de-dados.md`](05-dicionario-de-dados.md).
+Dos 70, **47 são candidatos a preditor**, 9 são proibidos só por vazamento
+(§3.6), 3 são identificadores e 11 são alvos ou componentes de alvo (as taxas
+ICSAP por faixa etária das Etapas 2b/2c e seus numeradores/denominadores).
+Dicionário completo em [`05-dicionario-de-dados.md`](05-dicionario-de-dados.md).
 
 ### 1.4 Tipo de tarefa e variáveis-alvo
 
@@ -213,7 +216,12 @@ validação cruzada da Etapa 1 **tem** de ser agrupada por município.
 ![correlação com alvos](../reports/figuras/06-correlacao-com-alvos.png)
 
 Usamos **Spearman** e não Pearson: com assimetria 37, um único outlier domina o
-Pearson. Spearman opera sobre postos e é imune a isso.
+Pearson. Spearman opera sobre postos e é imune a isso. O heatmap cobre os 47
+atributos numéricos candidatos: ficam de fora os identificadores, o alvo
+reescrito (`leitos_uti`, `internacoes_icsap`, `icsap_por_10mil`) e os alvos e
+componentes por faixa etária (`taxa_icsap_menor5/idoso`, `intern_*`,
+`equip_manut_vida`) — senão a matriz encheria de blocos ρ ≈ 1 que são o mesmo
+alvo com outro recorte.
 
 **`tem_uti`.** Tudo que correlaciona forte é **tamanho**: leitos de internação
 (0,53), estabelecimentos (0,52), internações (0,50), população (0,50), PIB
@@ -311,7 +319,9 @@ aparece como recorte descritivo.
 | Coluna | % ausente | Causa identificada |
 |---|---|---|
 | `vab_*`, `vab_total` | 20,01% | O IBGE ainda **não publicou** a abertura setorial do PIB para 2022 e 2023 |
+| `pct_esgoto_rede` / `pct_agua_rede` / `pct_lixo_coletado` | 0,47% / 0,16% / 0,02% | Os **mesmos 26 / 9 / 1 municípios** sem apuração no Censo 2022, em **todo ano** do painel |
 | `area_km2` | 0,11% (6 municípios) | Municípios instalados **depois do Censo 2010**, fonte da área |
+| `taxa_icsap_menor5` / `taxa_icsap_idoso` | 0,16% / 0,02% | Denominador zero na faixa etária — município-ano sem internação de menor de 5 / idoso residente |
 | `populacao` | 0,02% (1 município) | Boa Esperança do Norte (MT) não entra na série de estimativas do TCU |
 | 10 taxas derivadas | 0,02% | Propagação do denominador ausente |
 
@@ -321,8 +331,11 @@ Norte (MT).
 
 **Interpretação.** Nenhum buraco é aleatório, e essa é a informação que importa:
 imputação pela média pressupõe que o valor faltante veio da mesma população que
-os observados. Nos `vab_*` isso é falso por construção — a ausência é o IBGE não
-ter publicado, e imputar seria inventar estatística oficial.
+os observados. Nos `vab_*` e no saneamento do Censo isso é falso por construção —
+a ausência é o dado não ter sido publicado / apurado, e imputar a média seria
+inventar estatística oficial. Os `NaN` de `taxa_icsap_menor5/idoso` são de outra
+natureza: taxa indefinida por denominador zero, não valor perdido — a mesma
+instabilidade de pequenas áreas da §3.2.
 
 ### 3.2 Outliers: três naturezas, três tratamentos
 
@@ -334,10 +347,16 @@ ter publicado, e imputar seria inventar estatística oficial.
    capitais.** Tratamento: log, não remoção.
 2. **Extremos por denominador pequeno.** `tx_mort_infantil` chega a 285 por mil —
    só possível com um punhado de nascimentos. É ruído, não epidemia.
-3. **Valores fora de domínio: nenhum.** `taxa_icsap` ∈ [0; 0,812],
-   `pct_prenatal_7mais` ∈ [0,011; 1,0], nenhuma contagem negativa. Os poucos
-   valores negativos em `vab_industria` e `vab_adm_publica` são legítimos: valor
-   adicionado bruto pode ser negativo.
+3. **Valor fora de domínio: nenhum — mas escala inconsistente.** `taxa_icsap` ∈
+   [0; 0,812], `pct_prenatal_7mais` ∈ [0,011; 1,0], nenhuma contagem negativa.
+   Os poucos valores negativos em `vab_industria` e `vab_adm_publica` são
+   legítimos (valor adicionado bruto pode ser negativo). **Porém** as três
+   colunas de saneamento do Censo 2022 (`pct_esgoto_rede`, `pct_agua_rede`,
+   `pct_lixo_coletado`) estão em **escala 0–100**, enquanto todas as outras
+   proporções da base (`cobertura_esf`, `pct_prenatal_7mais`, `taxa_icsap*`)
+   estão em **0–1**. Não é valor impossível — é unidade misturada, e a
+   padronização (ou dividir por 100) tem de resolver antes de qualquer modelo
+   baseado em distância.
 
 ![funil](../reports/figuras/10-funil-denominador.png)
 
@@ -363,7 +382,17 @@ folds**.
 
 ### 3.4 Redundância e variância nula
 
-Nenhum atributo tem variância nula. Redundância severa, de três naturezas:
+Nenhum atributo tem variância nula na base inteira. Mas há **variância
+intra-painel nula**: as três colunas do Censo 2022 têm o mesmo valor nos dez
+anos em **100% dos municípios** (o Censo é foto única replicada por ano), e
+`cobertura_esf` é constante no tempo em ~53%. Numa base painel isso quase
+equivale a variância nula — essas colunas não explicam nada da variação
+temporal (o choque de 2020, a tendência de ICSAP) e são colineares com o
+efeito-município; num protocolo agrupado por município elas não ajudam a
+generalizar.
+
+Redundância severa, com **22 pares de \|ρ\| > 0,90** (contra os ~15 da base de
+53), de três naturezas:
 
 | Par | \|ρ\| | Natureza |
 |---|---|---|
@@ -371,13 +400,16 @@ Nenhum atributo tem variância nula. Redundância severa, de três naturezas:
 | `leitos_uti` × `tem_uti` | 0,998 | Duplicação do alvo (vazamento) |
 | `leitos_internacao` × `..._sus` | 0,985 | Proxy de oferta |
 | `populacao` × `nascidos_vivos` | 0,977 | Proxy de tamanho |
+| `internacoes_icsap` × `intern_idoso_icsap` | 0,97 | Duplicação do alvo (faixa etária) |
 | `internacoes_total` × `internacoes_icsap` | 0,945 | Duplicação do alvo |
+| `internacoes_total` × `intern_menor5_total` | 0,94 | Duplicação do alvo (faixa etária) |
 | `populacao` × `internacoes_total` | 0,931 | Proxy de tamanho |
+| `populacao` × `equipes_esf` | 0,91 | Proxy de tamanho |
 | `pib_per_capita` × `pct_vab_adm_publica` | 0,917 | Municípios que vivem de folha pública |
 
 **Esta redundância é a justificativa honesta para PCA**: há um fator latente de
-tamanho medido com ruído por cinco colunas — não é PCA aplicado por obrigação de
-checklist.
+tamanho medido com ruído por várias colunas — não é PCA aplicado por obrigação
+de checklist.
 
 ### 3.5 Registros duplicados
 
@@ -391,16 +423,20 @@ distintas, que **não devem ser removidas**.
 **Proibidos na Etapa 1** (`tem_uti`): `leitos_uti`, `leitos_complementares`,
 `leitos_internacao`, `leitos_internacao_sus`, `leitos_por_mil_hab`,
 `leitos_sus_por_mil_hab`, `estab_hospital`, `internacoes_total`,
-`tx_internacao_por_mil`.
+`tx_internacao_por_mil` e — novo na base de 70 — `equip_manut_vida` (respirador
+e monitor praticamente só existem dentro de UTI).
 
 **Proibidos na Etapa 2** (`taxa_icsap`): `internacoes_icsap`,
-`internacoes_total`, `icsap_por_10mil`.
+`internacoes_total`, `icsap_por_10mil` e — novos na base de 70 — os blocos por
+faixa etária: `taxa_icsap_menor5` e `taxa_icsap_idoso` (o **mesmo alvo** numa
+subpopulação, ρ = 0,65 e 0,84) e seus numeradores/denominadores
+`intern_menor5_icsap/total` e `intern_idoso_icsap/total`.
 
-Há dois vazamentos óbvios (`leitos_uti` **é** o alvo; `internacoes_*` **são** o
-alvo) e um sutil e mais interessante: usar volume de internação para prever
-presença de UTI é **circular** — município com UTI interna mais *porque* tem
-UTI. A seta causal aponta do alvo para o atributo. Um modelo assim teria AUC
-excelente e valor prático zero.
+Há dois vazamentos óbvios (`leitos_uti` **é** o alvo; `internacoes_*` e as
+`taxa_icsap_*` por faixa **são** o alvo) e um sutil e mais interessante: usar
+volume de internação para prever presença de UTI é **circular** — município com
+UTI interna mais *porque* tem UTI. A seta causal aponta do alvo para o atributo.
+Um modelo assim teria AUC excelente e valor prático zero.
 
 ---
 
@@ -417,10 +453,12 @@ excelente e valor prático zero.
 | 5 | Ausência estruturada | 20% de `vab_*` = 2 anos não publicados |
 | 6 | Redundância entre proxies de tamanho | ρ = 1,000 entre PIB e VAB; bloco 0,93–0,98 |
 | 7 | Choque exógeno no meio da série | Leitos de UTI +65%, ICSAP −26% em 2020–2021 |
-| 8 | Instabilidade de pequenas áreas na taxa populacional | Desvio-padrão 3× maior abaixo de 5 mil hab. |
+| 8 | Instabilidade de pequenas áreas | Desvio-padrão 3× maior abaixo de 5 mil hab.; `taxa_icsap_menor5/idoso` viram `NaN` por denominador zero |
 | 9 | Alvo 2 não explicado por atributo isolado | Maior correlação legítima ≈ 0,48 |
-| 10 | Vazamento presente e fácil de cometer | ρ = 0,998 entre `leitos_uti` e `tem_uti` |
+| 10 | Vazamento presente e fácil de cometer | ρ = 0,998 entre `leitos_uti` e `tem_uti`; `equip_manut_vida` e os blocos ICSAP por faixa são o alvo reescrito |
 | 11 | Faltava informação que não fosse tamanho | Resolvido: `dist_uti_km` tem ρ = 0,078 com população |
+| 12 | Escala inconsistente entre proporções | Saneamento do Censo em 0–100; resto da base em 0–1 |
+| 13 | Colunas constantes no painel | 3 colunas do Censo 2022 idênticas nos 10 anos em 100% dos municípios |
 
 ### 4.2 Hipóteses de tratamento
 
@@ -464,13 +502,15 @@ lendo a queda de 2020 como melhoria da APS.
 
 ### 4.3 O que a base ainda não tem
 
-1. **Distância até o município com UTI mais próxima.** Hoje um município sem UTI
-   a 20 km de uma capital é idêntico, na base, a um a 300 km de tudo. É
-   provavelmente o atributo mais forte que falta, e transforma o resultado de
-   *"municípios pequenos não têm UTI"* (óbvio) em *"estes municípios estão
-   isolados"* (útil).
-2. **Cobertura da Estratégia Saúde da Família**, que deveria explicar
-   `taxa_icsap` diretamente. Está no e-Gestor AB, sem API.
+1. **Distância rodoviária real até a UTI mais próxima.** A base **já tem**
+   `dist_uti_km` (§2.7), mas é haversine entre centroides. O próximo passo é
+   trocá-la por tempo de deslocamento por rodovia — no Norte, rio e ausência de
+   estrada tornam a linha reta otimista.
+2. **Indicador oficial de cobertura da Estratégia Saúde da Família.** A base tem
+   `cobertura_esf`, mas é um **proxy** (`min(1, equipes_esf · 3,45 / populacao)`)
+   que satura em 91,6% em 2023 e tem correlação ~0 com `taxa_icsap`. O indicador
+   homologado está no e-Gestor AB, sem API — e é ele que deveria explicar o
+   alvo 2 diretamente.
 3. **Validação da aproximação do ICSAP contra o microdado do SIH** para uma UF e
    um ano — transformaria a limitação de argumento em número.
 
@@ -481,7 +521,7 @@ Detalhamento com custo e retorno em
 
 ## 5. Síntese
 
-A base tem **55.700 instâncias e 53 atributos**, construída inteiramente a
+A base tem **55.700 instâncias e 70 atributos**, construída inteiramente a
 partir de fontes governamentais abertas e congelada no repositório, com dois
 alvos que sustentam tarefas de natureza diferente: uma **classificação
 desbalanceada quase determinada pelo porte** — em que o valor está justamente
@@ -491,5 +531,7 @@ isolado explica.
 O que diferencia esta base é que **cada exigência de pré-processamento tem aqui
 uma justificativa empírica, e não uma justificativa de checklist**: os valores
 ausentes são estruturados e têm causa identificada, o desbalanceamento é
-genuíno, a redundância entre proxies de tamanho existe de verdade, e o
-vazamento é real e fácil de cometer.
+genuíno, a redundância entre proxies de tamanho existe de verdade, o vazamento é
+real e fácil de cometer, e a base ainda carrega escala inconsistente e colunas
+constantes no painel — diagnósticos que só apareceram ao reexecutar a EDA sobre
+as 70 colunas.
