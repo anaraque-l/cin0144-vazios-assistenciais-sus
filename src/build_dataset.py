@@ -33,6 +33,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import fontes as F
+import geografia
 
 
 def _ler(nome: str) -> pd.DataFrame:
@@ -188,6 +189,32 @@ def derivar(base: pd.DataFrame) -> pd.DataFrame:
     # UTI ao mesmo tempo. Marcar permite tratar (ou excluir) esses anos depois.
     df["periodo_pandemia"] = df["ano"].isin([2020, 2021]).astype(int)
 
+    # ----------------------------------------------------------------- #
+    # Isolamento geografico
+    # ----------------------------------------------------------------- #
+    # CONCEITO: **atributo de vizinhanca**. Todos os outros atributos descrevem
+    # o municipio olhando so para dentro dele. Este olha para fora: a que
+    # distancia esta o servico mais proximo.
+    # POR QUE: sem ele, um municipio sem UTI a 15 km de uma capital e um a 500
+    # km de tudo sao IDENTICOS na base -- e sao situacoes opostas. O primeiro e
+    # especializacao metropolitana normal; o segundo e vazio assistencial.
+    # INTERPRETACAO: a correlacao de Spearman desta coluna com a populacao e
+    # ~0,06. E a unica variavel do projeto que NAO e tamanho disfarcado.
+    print("  calculando distancias geograficas (pode levar ~1 min)...")
+    distancias = geografia.painel_de_distancias(df)
+    df = df.merge(distancias, on=["cod_ibge7", "ano"], how="left")
+
+    # CONCEITO: **indice composto**. Isolado sozinho nao basta (um municipio
+    # isolado com 800 habitantes nao "deveria" ter UTI); populoso sozinho
+    # tambem nao. O vazio assistencial e a INTERSECAO: gente suficiente para
+    # justificar o servico E longe demais para alcanca-lo.
+    # Os cortes (20 mil hab., 100 km) sao os parametros de referencia usados na
+    # discussao de regionalizacao do SUS -- e estao aqui explicitos justamente
+    # para poderem ser questionados.
+    df["vazio_assistencial"] = (
+        (df["tem_uti"] == 0) & (df["populacao"] >= 20_000) & (df["dist_uti_km"] >= 100)
+    ).astype(int)
+
     return df
 
 
@@ -205,12 +232,14 @@ ORDEM_COLUNAS = [
     "estab_apoio_diagnose", "estab_caps", "estab_ab_por_10mil",
     "leitos_internacao", "leitos_internacao_sus", "leitos_por_mil_hab", "leitos_sus_por_mil_hab",
     "leitos_uti", "leitos_complementares",
+    # isolamento geografico
+    "lat", "lon", "dist_uti_km", "dist_uti_externa_km", "dist_hospital_km",
     # uso e desfecho
     "internacoes_total", "internacoes_icsap", "tx_internacao_por_mil",
     "nascidos_vivos", "nasc_prenatal_7mais", "nasc_prenatal_nenhuma", "nasc_prenatal_ignorado",
     "pct_prenatal_7mais", "obitos_menor1", "tx_mort_infantil",
     # alvos
-    "tem_uti", "taxa_icsap", "icsap_por_10mil",
+    "tem_uti", "taxa_icsap", "icsap_por_10mil", "vazio_assistencial",
 ]
 
 
@@ -231,3 +260,7 @@ if __name__ == "__main__":
     print(f"municipios: {tabela['cod_ibge7'].nunique()}")
     print(f"prevalencia de tem_uti: {tabela['tem_uti'].mean():.1%}")
     print(f"taxa_icsap media: {tabela['taxa_icsap'].mean():.1%}")
+    print(f"distancia mediana ate UTI (quem nao tem): "
+          f"{tabela.loc[tabela.tem_uti == 0, 'dist_uti_km'].median():.0f} km")
+    print(f"municipios-ano em vazio assistencial: {tabela['vazio_assistencial'].sum():,} "
+          f"({tabela['vazio_assistencial'].mean():.1%})")

@@ -70,7 +70,7 @@ Duas decisões de coleta mudam materialmente o resultado:
 
 ### 1.3 Dimensões e tipos de variáveis
 
-**55.700 instâncias × 47 atributos**, unidade município × ano, 5.570 municípios
+**55.700 instâncias × 53 atributos**, unidade município × ano, 5.570 municípios
 × 10 anos (2014–2023).
 
 | Tipo | Qtd. | Exemplos |
@@ -78,12 +78,12 @@ Duas decisões de coleta mudam materialmente o resultado:
 | Identificador (fora do modelo) | 3 | `cod_ibge7`, `municipio` |
 | Categórico nominal | 4 | `uf`, `regiao`, `mesorregiao` |
 | Categórico ordinal | 1 | `porte_populacional` |
-| Binário | 3 | `capital`, `periodo_pandemia`, `tem_uti` |
+| Binário | 4 | `capital`, `periodo_pandemia`, `tem_uti`, `vazio_assistencial` |
 | Temporal | 1 | `ano` |
 | Quantitativo discreto (contagem) | 18 | `populacao`, `leitos_uti`, `internacoes_total` |
-| Quantitativo contínuo | 17 | `pib_per_capita`, `taxa_icsap`, `pct_prenatal_7mais` |
+| Quantitativo contínuo | 22 | `pib_per_capita`, `taxa_icsap`, `dist_uti_km` |
 
-Dos 47, **31 são candidatos a preditor**, 9 são proibidos por vazamento (§3.6),
+Dos 53, **36 são candidatos a preditor**, 9 são proibidos por vazamento (§3.6),
 3 são identificadores e 4 são alvos ou componentes de alvo. Dicionário completo
 em [`05-dicionario-de-dados.md`](05-dicionario-de-dados.md).
 
@@ -232,6 +232,66 @@ uma hipótese alternativa mais incômoda: onde não há hospital, a internação
 evitável não aparece na base porque **não houve registro** — e não porque a APS
 resolveu. É o *"quem não foi medido não existe"*, e precisa estar nas limitações.
 
+### 2.7 Isolamento geográfico — o achado mais forte
+
+![isolamento](../reports/figuras/11-isolamento-mapa-e-gradiente.png)
+
+Todos os atributos anteriores descrevem o município olhando **para dentro** dele.
+`dist_uti_km` olha para fora: a que distância está o leito de UTI mais próximo,
+calculada por centroide de área (malha do IBGE) e distância haversine,
+**recalculada ano a ano** porque leitos abrem e fecham.
+
+**Por que era indispensável.** Sem esse atributo, um município sem UTI a 15 km de
+uma capital e um a 500 km de tudo são **idênticos na base** — e são situações
+opostas: a primeira é especialização metropolitana normal, a segunda é vazio
+assistencial. O erro do modelo seria ininterpretável.
+
+**ρ(distância, população) = 0,078** entre os municípios sem UTI. É a primeira
+variável do projeto que não é tamanho disfarçado — todas as outras correlacionam
+~0,50 com o alvo justamente por medirem escala. Ressalva honesta: a distância
+não é ortogonal à *densidade* (ρ = −0,65); município isolado costuma ser vazio.
+
+Mediana de 39,6 km, p90 de 109 km, **máximo de 865 km**.
+
+**O gradiente dose-resposta.** Conforme o isolamento cresce, três indicadores
+medidos por sistemas diferentes pioram juntos:
+
+| Distância até UTI | `taxa_icsap` | Mortalidade infantil | Pré-natal 7+ |
+|---|---|---|---|
+| ≤ 25 km | 0,212 | 11,7 | 77,9% |
+| 25–50 km | 0,240 | 12,4 | 76,4% |
+| 50–100 km | 0,255 | 13,5 | 70,8% |
+| 100–200 km | 0,268 | 14,5 | 63,9% |
+| > 200 km | **0,285** | **18,3** | **54,0%** |
+
+Internação evitável sobe, mortalidade infantil sobe 56%, cobertura de pré-natal
+cai 24 pontos. SIH, SIM e SINASC apontando na mesma direção.
+
+⚠️ **Associação, não causalidade.** Isolamento vem junto com pobreza, baixa
+densidade e menor cobertura de atenção básica. A distância pode ser o marcador
+visível de tudo isso — separar os efeitos é modelagem, não EDA.
+
+### 2.8 Vazio assistencial: o produto do projeto
+
+`vazio_assistencial = 1` quando o município **não tem UTI**, tem **≥ 20 mil
+habitantes** e está a **≥ 100 km** do leito mais próximo — a interseção entre
+"população suficiente para justificar o serviço" e "longe demais para alcançá-lo".
+Os dois cortes são explícitos no código justamente para poderem ser questionados.
+
+- **1.730 municípios-ano (3,1%)** se enquadram.
+- **Norte: 19,6% · Sul: 0,08%** — razão de **250 para 1**. Nenhum outro atributo
+  separa as regiões dessa forma.
+- **A pandemia encurtou distâncias e o efeito ficou:** a distância mediana cai de
+  41,3 km (2019) para 35,4 km (2021) e não retorna (36,5 km em 2023); os vazios
+  caem de 192 para 106. Os leitos COVID abriram UTIs onde não havia, e parte
+  permaneceu. É um argumento **contra** excluir 2020–2021 da análise.
+- **A lista concreta:** Itacoatiara (AM), 103.598 habitantes, **175 km**;
+  Oriximiná (PA), 68.294 habitantes, **329 km**. Municípios maiores que centenas
+  que *têm* UTI.
+
+Na Etapa 1 essa lista vira o conjunto dos falsos positivos do modelo. Aqui, já
+aparece como recorte descritivo.
+
 ---
 
 ## 3. Diagnóstico dos dados
@@ -352,6 +412,7 @@ excelente e valor prático zero.
 | 8 | Instabilidade de pequenas áreas na taxa populacional | Desvio-padrão 3× maior abaixo de 5 mil hab. |
 | 9 | Alvo 2 não explicado por atributo isolado | Maior correlação legítima ≈ 0,48 |
 | 10 | Vazamento presente e fácil de cometer | ρ = 0,998 entre `leitos_uti` e `tem_uti` |
+| 11 | Faltava informação que não fosse tamanho | Resolvido: `dist_uti_km` tem ρ = 0,078 com população |
 
 ### 4.2 Hipóteses de tratamento
 
@@ -412,7 +473,7 @@ Detalhamento com custo e retorno em
 
 ## 5. Síntese
 
-A base tem **55.700 instâncias e 47 atributos**, construída inteiramente a
+A base tem **55.700 instâncias e 53 atributos**, construída inteiramente a
 partir de fontes governamentais abertas e congelada no repositório, com dois
 alvos que sustentam tarefas de natureza diferente: uma **classificação
 desbalanceada quase determinada pelo porte** — em que o valor está justamente

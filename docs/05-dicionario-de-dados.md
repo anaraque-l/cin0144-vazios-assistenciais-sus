@@ -3,7 +3,7 @@
 Gerado por `python src/gerar_dicionario.py` a partir de
 `data/processed/municipio_ano.csv`.
 
-**55,700 instâncias · 47 atributos · município × ano ·
+**55,700 instâncias · 53 atributos · município × ano ·
 2014–2023**
 
 A coluna **papel** indica como o atributo pode ser usado na modelagem:
@@ -50,6 +50,11 @@ A coluna **papel** indica como o atributo pode ser usado na modelagem:
 | `leitos_sus_por_mil_hab` | continuo | leitos/mil hab | derivado | VAZAMENTO Etapa 1 | 0.00 a 29.26 | 0.02% | Oferta hospitalar SUS normalizada. |
 | `leitos_uti` | discreto | leitos | CNES | ALVO 1 (origem) | 0.00 a 7,427.00 | 0.00% | Leitos de UTI. tem_uti = (leitos_uti > 0). |
 | `leitos_complementares` | discreto | leitos | CNES | VAZAMENTO Etapa 1 | 0.00 a 8,885.00 | 0.00% | UTI + unidades intermediarias + isolamento. |
+| `lat` | continuo | graus | IBGE Malhas | auxiliar | -33.65 a 4.68 | 0.02% | Latitude do centroide de area do municipio. |
+| `lon` | continuo | graus | IBGE Malhas | auxiliar | -73.44 a -34.84 | 0.02% | Longitude do centroide de area do municipio. |
+| `dist_uti_km` | continuo | km | derivado (IBGE Malhas + CNES) | atributo | 0.00 a 864.71 | 0.02% | Distancia haversine ate o municipio mais proximo com leito de UTI; 0 se o proprio tem. UNICO atributo nao correlacionado com tamanho (rho = 0,078 com populacao). |
+| `dist_uti_externa_km` | continuo | km | derivado | atributo | 1.29 a 864.71 | 0.02% | Idem, ignorando o proprio municipio: 'se a UTI daqui fechar, para onde vai o paciente?'. |
+| `dist_hospital_km` | continuo | km | derivado | VAZAMENTO Etapa 1 | 0.00 a 109.79 | 0.02% | Distancia ate o leito de internacao mais proximo. Quase determina tem_uti. |
 | `internacoes_total` | discreto | internacoes | SIH por residencia | ALVO 2 (denominador) | 0.00 a 608,371.00 | 0.00% | Internacoes SUS de residentes no ano. |
 | `internacoes_icsap` | discreto | internacoes | SIH por residencia | ALVO 2 (numerador) | 0.00 a 112,543.00 | 0.00% | Internacoes sensiveis a atencao primaria (aproximadas). |
 | `tx_internacao_por_mil` | continuo | intern/mil hab | derivado | VAZAMENTO Etapa 1 | 1.15 a 347.61 | 0.02% | Taxa geral de internacao. |
@@ -63,3 +68,4 @@ A coluna **papel** indica como o atributo pode ser usado na modelagem:
 | `tem_uti` | binario | 0/1 | derivado do CNES | **ALVO 1** | 0.00 a 1.00 | 0.00% | 1 se o municipio tem ao menos um leito de UTI. |
 | `taxa_icsap` | continuo | proporcao | derivado do SIH | **ALVO 2** | 0.00 a 0.81 | 0.02% | internacoes_icsap / internacoes_total. |
 | `icsap_por_10mil` | continuo | intern/10 mil hab | derivado do SIH | VAZAMENTO Etapa 2 | 0.00 a 2,390.48 | 0.02% | Versao populacional do alvo 2. |
+| `vazio_assistencial` | binario | 0/1 | derivado | atributo | 0.00 a 1.00 | 0.00% | 1 quando tem_uti=0 E populacao>=20 mil E dist_uti_km>=100. Interseccao entre 'porte justifica o servico' e 'longe demais para alcancar'. |

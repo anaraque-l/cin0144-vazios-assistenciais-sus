@@ -47,7 +47,7 @@ oficial — está em [`03-icsap-operacionalizacao.md`](03-icsap-operacionalizaca
 - **Unidade de análise:** município × ano
 - **Período:** 2014–2023 (10 anos)
 - **Instâncias:** 55.700 (5.570 municípios × 10 anos)
-- **Atributos:** 47 colunas, das quais **31 são candidatas a preditor**
+- **Atributos:** 53 colunas, das quais **36 são candidatas a preditor**
   (9 são proibidas por vazamento, 3 são identificadores, 4 são alvo ou componente de alvo)
 - **Formato:** `data/processed/municipio_ano.csv`
 
@@ -66,6 +66,8 @@ src/
   ibge.py           APIs do IBGE: Localidades (malha) e SIDRA (PIB, área).
   icsap.py          A Lista Brasileira de ICSAP e o mapeamento dela para a
                     dimensão que o TabNet realmente expõe.
+  geografia.py      Centroides da malha do IBGE e distância até o serviço
+                    mais próximo. É o atributo que não é proxy de tamanho.
   ingestao.py       Uma função por fonte -> data/interim/*.csv
   build_dataset.py  Junta tudo -> data/processed/municipio_ano.csv
 data/
@@ -92,6 +94,7 @@ retorno por minuto lido:
 | 1 | `build_dataset.py` | 233 | **Onde os dois alvos nascem** e onde cada taxa é definida. É o arquivo que responde "o que exatamente é `taxa_icsap`?" | 🔴 todo mundo |
 | 2 | `fontes.py` | 180 | Catálogo, sem lógica. Responde "de onde veio esse número?" e é onde se muda período e definição de UTI | 🔴 todo mundo |
 | 3 | `icsap.py` | 128 | O mapeamento portaria → TabNet, com a divergência declarada grupo a grupo. **É o que a banca vai questionar** | 🔴 todo mundo |
+| 3b | `geografia.py` | 195 | Centroide e haversine. Explica **por que** o isolamento entrou e qual a limitação dele | 🔴 todo mundo |
 | 4 | `notebooks/01-eda.ipynb` | 23 células | A entrega em si | 🔴 todo mundo |
 | 5 | `ingestao.py` | 362 | Uma função por fonte, todas com a mesma forma. Leia **uma** (`leitos_uti`) e você leu as nove | 🟡 quem for mexer em fonte |
 | 6 | `ibge.py` | 169 | APIs REST comuns. O único ponto não óbvio são os códigos de variável do SIDRA | 🟡 quem for mexer em fonte |
