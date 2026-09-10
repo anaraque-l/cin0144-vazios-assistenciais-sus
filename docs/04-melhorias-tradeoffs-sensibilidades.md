@@ -11,7 +11,120 @@ Três seções, com propósitos diferentes:
 
 ---
 
-## Sensibilidades — validar antes de entregar
+## Parte 0 — As sensibilidades, agora medidas
+
+As verificações S1–S8 abaixo foram feitas de forma **qualitativa**: confirmar que uma
+lista exclui um atributo, argumentar que um efeito existe. Quatro delas agora têm
+**número**, produzido por [`../src/sensibilidades.py`](../src/sensibilidades.py).
+
+**Protocolo.** Floresta aleatória (200 árvores), 5 folds, semente 42, imputação dentro
+do fold via `Pipeline`. Salvo onde indicado, a partição é `StratifiedGroupKFold`
+agrupada por `cod_ibge7` — a honesta. Alvo `tem_uti`.
+
+> O modelo é **instrumento de medida**, como um termômetro. O que se lê é sempre a
+> **diferença** entre duas versões. Nenhum número daqui é "o desempenho do nosso
+> modelo": isso é a Entrega 2. A base entregue continua sem imputação, sem remoção de
+> *outlier* e sem codificação.
+
+Reproduzir: `python src/sensibilidades.py` (~7 min). Saída em
+`reports/sensibilidades-saida.txt`.
+
+### M-S1 — A partição aleatória infla +0,019
+
+| partição | AUC |
+|---|---|
+| `StratifiedKFold` aleatório | 0,9965 ± 0,0011 |
+| `StratifiedGroupKFold` por município | **0,9773 ± 0,0043** |
+| **otimismo** | **+0,0192** |
+
+O efeito existe e é real, mas é **menor do que S1 fazia supor** — e o motivo é
+instrutivo: o conjunto honesto já chega a 0,977. Como o alvo é quase determinado pelo
+porte (relatório, §2.3) e o porte é estável ao longo dos 10 anos, agrupar por município
+remove menos informação do que parece. Há efeito de teto.
+
+Isso **não** enfraquece a recomendação de agrupar: 0,0192 é mais de 4× o desvio entre
+folds, e o custo de agrupar é uma linha de código.
+
+### M-S2 — Vazamento: dois atributos catastróficos, e um deles não estava na lista
+
+| atributo acrescentado | AUC | Δ |
+|---|---|---|
+| *conjunto honesto (referência)* | 0,9773 | — |
+| **`dist_uti_km`** | **1,0000** | **+0,0227** |
+| `leitos_uti` | **1,0000** | +0,0227 |
+| `leitos_complementares` | 0,9965 | +0,0192 |
+| `leitos_internacao` | 0,9841 | +0,0068 |
+| `vazio_assistencial` | 0,9777 | +0,0004 |
+| `estab_hospital` | 0,9775 | +0,0002 |
+| `internacoes_total` | 0,9772 | −0,0001 |
+
+**O achado: `dist_uti_km` é vazamento perfeito e não está em `VAZAMENTO_ETAPA1`.**
+Ele vale **exatamente 0 nas 6.024 linhas com UTI e nunca 0 nas 49.676 sem** — a
+condição `dist_uti_km == 0` *é* o alvo. Um único limiar entrega AUC 1,0.
+
+A lista canônica de `src/fontes.py` tem 12 colunas e pegou os casos vizinhos —
+`dist_hospital_km` e `vazio_assistencial` estão lá. `dist_uti_km` não. Como a lista é
+o que define o conjunto seguro, hoje ele **entra como preditor candidato da Etapa 1**.
+
+**A EDA está correta; o risco é da modelagem.** O notebook sempre usa
+`sem_uti["dist_uti_km"]`, filtrado aos municípios sem UTI — e nesse recorte a variável
+é exatamente o que a seção 2.7 do relatório diz que ela é. O gradiente dose-resposta
+continua sendo o achado mais forte da EDA e não é afetado por isto.
+
+O que não se pode é deixá-lo no conjunto de atributos da Etapa 2. A versão correta para
+modelagem é **`dist_uti_externa_km`**, que ignora o próprio município e já existe na
+base justamente para isso — mediana de 31,7 km para quem tem UTI contra 39,6 km para
+quem não tem, ou seja, informativa sem ser determinística.
+
+**Correção a fazer:** acrescentar `dist_uti_km` a `VAZAMENTO_ETAPA1` em
+`src/fontes.py`. Os `assert` de `gerar_dicionario.py` e do notebook passam a cobri-lo.
+
+**A surpresa na outra direção:** `estab_hospital` (+0,0002) e `internacoes_total`
+(−0,0001) **não vazam de forma mensurável**, embora S2 os tratasse como quase
+determinantes. A informação deles já está no porte. Continuam fora por argumento
+causal, mas agora sabemos que a decisão custa nada.
+
+### M-S3 — Balanceamento não melhora o modelo; move o ponto de operação
+
+| | AUC | F1 | recall | precisão |
+|---|---|---|---|---|
+| sem `class_weight` | 0,9773 | 0,8029 | 0,7493 | 0,8656 |
+| `class_weight='balanced'` | 0,9770 | 0,8040 | **0,7860** | 0,8233 |
+| **diferença** | −0,0003 | +0,0011 | **+0,0367** | **−0,0423** |
+
+Com 10,8% de positivos, o reflexo é balancear. A medida mostra o que realmente
+acontece: **AUC e F1 não se movem**, e o balanceamento **troca precisão por recall
+quase 1 por 1**.
+
+A leitura correta é que balancear não deixa o modelo melhor — deixa-o **mais disposto a
+dizer "sim"**. Para este projeto isso é desejável, mas por uma razão que nada tem a ver
+com desempenho: o produto é a **lista de municípios que deveriam ter UTI e não têm**,
+ou seja, os falsos positivos. Perder 4 pontos de precisão para ganhar 4 de recall
+significa uma lista maior e com mais ruído — e é a lista que interessa.
+
+**Consequência prática:** a Entrega 2 deve escolher o ponto de operação por **recall**,
+e nunca justificar balanceamento por AUC.
+
+### M-S4 — A pandemia é sinal, não ruído
+
+| treino | AUC |
+|---|---|
+| base inteira (2014–2023) | 0,9773 ± 0,0043 |
+| sem 2020–2021 | 0,9808 ± 0,0053 |
+
+Excluir a pandemia **sobe** a AUC — e isso é argumento **contra** excluí-la, não a
+favor. O número não é comparável entre linhas: são amostras diferentes. O que ele diz é
+que **2020–2021 são anos genuinamente mais difíceis de prever**, porque leitos abriram
+onde o perfil do município não previa. Remover esses anos não melhora o modelo: remove
+o pedaço da realidade em que o modelo erra por um motivo interessante.
+
+Combina com o achado do relatório (§2.8) de que a distância mediana caiu na pandemia e
+**não voltou**: parte dos leitos COVID permaneceu.
+
+---
+
+## Sensibilidades — a checagem qualitativa original
+
 
 > Marque cada item. O que não for validado tem de virar uma frase de limitação
 > explícita no relatório.

@@ -285,6 +285,8 @@ VAZAMENTO_ETAPA1 = frozenset({
     "tx_internacao_por_mil",
     "equip_manut_vida",        # respirador/monitor: rho=0,528 com tem_uti (mediana 5 vs 300)
     "dist_hospital_km",        # deriva de leitos_internacao (ja vazamento); rho=-0,25
+    "dist_uti_km",             # VALE 0 exatamente quando tem_uti=1: AUC 1,0 sozinho
+                               # (docs/04, M-S2). Use dist_uti_externa_km para modelar.
     "vazio_assistencial",      # e DEFINIDO usando tem_uti==0 (build_dataset.py) -- circular
 })
 
