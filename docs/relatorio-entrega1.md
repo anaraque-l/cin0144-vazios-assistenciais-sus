@@ -34,9 +34,17 @@ assistencial**.
 **ICSAP.** Internações por Condições Sensíveis à Atenção Primária são
 internações evitáveis: pneumonia bacteriana, diabetes descompensado,
 hipertensão, infecção urinária. Se a atenção básica funciona, elas não
-acontecem. É um indicador de **função**, não de **prédio**, e não vem pronto em
-base nenhuma — é derivado do CID-10 de cada internação, seguindo a
-**Portaria SAS/MS nº 221/2008**.
+acontecem. É um indicador de **função**, não de **prédio**.
+
+**O indicador não é nosso.** A ideia vem da literatura internacional de
+*Ambulatory Care Sensitive Conditions* (anos 1990) e a lista brasileira é
+oficial: **Portaria SAS/MS nº 221/2008**, 19 grupos de causas em CID-10. É
+usado por secretarias estaduais e tem literatura acadêmica extensa no Brasil.
+
+**Nosso é o cálculo.** Não existe, nas fontes que usamos, uma série nacional
+pronta de ICSAP por município e ano — ela é derivada do CID de cada internação
+do SIH. Foi isso que construímos, com a operacionalização documentada em
+`docs/03`.
 
 ### 1.2 Fonte, coleta e licença
 

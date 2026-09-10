@@ -33,9 +33,18 @@ ambulatorial. Logo:
 
 > taxa alta de ICSAP ⇒ a porta de entrada do SUS não está segurando o paciente
 
-É um indicador de **função**, não de **prédio**. E não vem pronto em base
-nenhuma: nós o construímos a partir do CID-10 de cada internação. Isso muda o
-projeto de *"aplicamos sklearn num CSV"* para *"formulamos um problema"*.
+É um indicador de **função**, não de **prédio**.
+
+⚠️ **Cuidado com o que dizer na apresentação.** O indicador **não é invenção
+nossa**: vem da literatura internacional de *Ambulatory Care Sensitive
+Conditions* (anos 1990), e a lista brasileira é a da **Portaria SAS/MS nº
+221/2008** — oficial, usada por secretarias estaduais e com bibliografia
+acadêmica extensa. Dizer que criamos a métrica seria falso, e a banca sabe.
+
+O que é nosso é o **cálculo**: não há, nas fontes que usamos, uma série
+nacional pronta de ICSAP por município e ano. Ela é derivada do CID-10 de cada
+internação do SIH, e foi isso que construímos. Ainda assim, muda o projeto de
+*"aplicamos sklearn num CSV"* para *"formulamos um problema"*.
 
 A lista oficial é a da **Portaria SAS/MS nº 221, de 17/04/2008** (19 grupos de
 causas). Como operacionalizamos essa lista — e onde a nossa versão diverge da
