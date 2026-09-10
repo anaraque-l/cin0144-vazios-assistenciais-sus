@@ -23,8 +23,8 @@ o modelo erra** na Etapa 1: os que, pelo perfil, deveriam ter UTI e não têm.
 ## A base
 
 - **Unidade:** município × ano · **Período:** 2014–2023
-- **55.700 instâncias** (5.570 municípios × 10 anos) · **47 atributos**
-- Fontes governamentais abertas: **IBGE** (malha, PIB, área) e **DATASUS**
+- **55.700 instâncias** (5.570 municípios × 10 anos) · **53 atributos**
+- Fontes governamentais abertas: **IBGE** (malha, PIB, área, geometria) e **DATASUS**
   (CNES, SIH, SIM, SINASC). Nenhuma exige cadastro ou chave.
 - Arquivo final: `data/processed/municipio_ano.csv`
 
@@ -60,6 +60,7 @@ src/
   fontes.py          registro único de toda fonte (URL, .def, licença, período)
   tabnet.py          cliente do TabNet/DATASUS com cache em disco
   ibge.py            APIs de Localidades e SIDRA
+  geografia.py       centroides e distância até o serviço mais próximo
   icsap.py           Lista Brasileira de ICSAP e seu mapeamento
   ingestao.py        uma função por fonte -> data/interim/
   build_dataset.py   junta tudo -> data/processed/

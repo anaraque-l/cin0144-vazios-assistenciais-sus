@@ -18,19 +18,32 @@ Três seções, com propósitos diferentes:
 
 ### S0 — Os números batem com a fonte oficial?
 
-- [ ] **Total de internações SUS em 2023.** Somar `internacoes_total` do ano e
-      comparar com o painel do DATASUS. Ordem de grandeza esperada: ~11 milhões.
-      Divergência acima de 5% indica erro na soma das 12 competências.
-- [ ] **Leitos de UTI em 2023.** Somar `leitos_uti` e comparar com o total
-      publicado pelo CNES. Se estiver muito acima, alguma categoria de unidade
-      intermediária entrou na conta por engano (checar `LEITOS_UTI` em
-      `src/fontes.py`).
-- [ ] **População do Brasil em 2023.** Somar `populacao`. Esperado: ~203 milhões
-      pela estimativa TCU. Se der muito diferente, a junção `cod_ibge6` falhou.
-- [ ] **Nascidos vivos em 2023.** ~2,5 milhões.
+- [x] **Total de internações SUS em 2023 — VALIDADO.** O painel soma
+      **13.214.833**. A conferência foi feita de duas formas:
+      (a) o total do TabNet por local de **residência** e por local de
+      **internação** bate **exatamente** (13.215.017 nos dois), o que confirma
+      que a soma das 12 competências está correta — são as mesmas AIHs vistas de
+      dois ângulos;
+      (b) a diferença de **184 internações** para o nosso painel é Fernando de
+      Noronha, excluído pela decisão D9.
+      Nota: `Internações` corresponde a 98,95% das `AIH aprovadas` (13.355.585),
+      porque exclui AIH de continuação de longa permanência. A expectativa
+      inicial de "~11 milhões" estava desatualizada — é o patamar de 2019.
+- [x] **Leitos de UTI em 2023 — 62.359.** Compatível com a ordem de grandeza do
+      parque de terapia intensiva brasileiro. As seis categorias de unidade
+      intermediária, isolamento e suporte ventilatório COVID ficam de fora: em
+      Recife, por exemplo, o total de leitos complementares é 1.971 e o de UTI
+      é 1.723 — a diferença de 248 são exatamente essas categorias.
+      Rastreamento completo em `docs/06`, seção 7.
+- [x] **População do Brasil em 2023 — 203.077.589.** Bate com a estimativa TCU.
+      A junção por `cod_ibge6` está correta.
+- [x] **Nascidos vivos em 2023 — 2.537.481.** Dentro do esperado (~2,5 milhões).
+      Conferência cruzada: o SINASC por residência da mãe (2.537.511) e por
+      ocorrência (2.537.573) diferem em 62 registros, 0,002%.
+- [x] **Óbitos de menores de 1 ano em 2023 — 32.001.**
 
-Esse é o teste mais importante de todos e leva 5 minutos. Um pipeline que
-agrega errado produz uma EDA inteiramente plausível e inteiramente falsa.
+Esse é o teste mais importante de todos. Um pipeline que agrega errado produz
+uma EDA inteiramente plausível e inteiramente falsa.
 
 ### S1 — A não-independência das linhas
 
@@ -104,8 +117,8 @@ população diferente daquela que gerou o buraco.
 
 ### S8 — O básico do enunciado
 
-- [ ] Mais de 1.000 instâncias ✔ (55.700)
-- [ ] Mais de 10 atributos ✔ (47 colunas)
+- [x] Mais de 1.000 instâncias ✔ (55.700)
+- [x] Mais de 10 atributos ✔ (53 colunas, 36 candidatas a preditor)
 - [ ] Tipo de tarefa declarado, com variável-alvo identificada e justificada
 - [ ] **Toda figura acompanhada de interpretação** — o enunciado cobra isso
       explicitamente; é o item mais fácil de perder ponto
@@ -119,12 +132,14 @@ população diferente daquela que gerou o buraco.
 |---|---|---|---|---|
 | T1 | TabNet agregado | Microdados `.dbc` via PySUS | Base cabe no repositório, reprodutível, sem 30 GB de download | `taxa_icsap` é aproximada, não exata |
 | T2 | Painel município × ano | Corte transversal de um ano | 55.700 instâncias, `ano` como atributo, pandemia visível | Linhas não independentes; exige CV agrupada |
-| T3 | `tem_uti` como alvo | "Tem estabelecimento de saúde" | Desbalanceamento genuíno (~13%), problema com conteúdo | Alvo mede *cadastro*, não *funcionamento* |
+| T3 | `tem_uti` como alvo | "Tem estabelecimento de saúde" | Desbalanceamento genuíno (10,8%), problema com conteúdo | Alvo mede *cadastro*, não *funcionamento* |
 | T4 | Município de residência | Município de internação | Elimina o viés de fluxo, que é enorme | Perde a leitura de "quanto o município atrai pacientes" |
 | T5 | Dezembro como foto do CNES | Média das 12 competências | Convenção do MS, leitura direta | Sensível a abertura/fechamento pontual de leito |
 | T6 | Estimativa TCU como população | Estimativa SIDRA / Censo 2022 | Mesmo denominador do Ministério da Saúde; série sem degrau | Não incorpora a revisão do Censo 2022 |
 | T7 | Zero para ausência no CNES | `NaN` + imputação | Reflete a realidade: não existe leito ali | Confunde "não tem" com "não informou", se houver subnotificação |
 | T8 | Área do Censo 2010 fixa | Área revisada ano a ano | Simplicidade; a variação é mínima | Pequeno erro em municípios com limite revisado |
+| T9 | Distância haversine do centroide | Distância rodoviária/fluvial real | Uma requisição, sem dependência externa | Subestima muito o deslocamento amazônico |
+| T10 | Cortes fixos no `vazio_assistencial` (20 mil hab., 100 km) | Limiar derivado dos dados | Leitura direta, questionável de forma explícita | Arbitrário; exige teste de sensibilidade |
 
 ---
 
@@ -132,7 +147,7 @@ população diferente daquela que gerou o buraco.
 
 Ordenadas por **retorno analítico ÷ esforço**.
 
-### M1 — Distância até o município com UTI mais próxima *(alto retorno)*
+### ~~M1 — Distância até o município com UTI mais próxima~~ ✅ **IMPLEMENTADO**
 
 Hoje o modelo não sabe nada sobre **vizinhança**. Um município sem UTI a 20 km
 de uma capital é situação completamente diferente de um a 300 km da cidade mais
@@ -143,9 +158,14 @@ Como fazer: baixar os centroides da malha municipal
 ou a tabela de coordenadas de sedes municipais do IBGE, e calcular a distância
 haversine até o município mais próximo com `tem_uti == 1`.
 
-**É provavelmente o atributo mais forte que falta**, e é o que transforma o
-resultado de "municípios pequenos não têm UTI" (óbvio) em "estes municípios
-estão longe de tudo" (útil).
+**Implementado em `src/geografia.py`** (commit `a03dee0`). Confirmou-se o que
+se esperava: ρ com população = **0,078**, e o gradiente dose-resposta em
+`taxa_icsap`, mortalidade infantil e cobertura de pré-natal.
+
+**O que ficou pendente daqui:** a distância é em **linha reta**. Na Amazônia o
+deslocamento é fluvial e leva dias — 175 km em linha reta não são uma hora de
+viagem. Uma matriz de tempo real de deslocamento seria o refinamento natural, e
+não encontramos fonte pública aberta para os 5.570 municípios.
 
 ### M2 — Cobertura da Estratégia Saúde da Família *(alto retorno)*
 

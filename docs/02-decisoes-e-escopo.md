@@ -14,7 +14,7 @@ explicitamente justificadas"*.
 estabelecimento de saúde cadastrado no CNES. Sem variação no alvo não existe
 problema de classificação — o modelo aprenderia a constante. É preciso *subir na
 escada de complexidade* até achar o serviço cuja presença ainda varia entre
-municípios. UTI fica na faixa de ~13% de positivos: desbalanceamento genuíno.
+municípios. UTI fica em **10,8%** de positivos no painel: desbalanceamento genuíno.
 
 **Alternativas consideradas:** serviço de oncologia, hemodiálise, maternidade de
 alto risco. Todos serviriam; UTI foi escolhida por ser a de leitura mais direta
@@ -118,3 +118,46 @@ estão registradas no notebook e em [`04`](04-melhorias-tradeoffs-sensibilidades
 **Por quê:** Fernando de Noronha (2605459) é distrito estadual de Pernambuco, não
 município. Aparece na malha do IBGE mas não no DATASUS, o que geraria uma linha
 com todos os indicadores de saúde faltantes por construção.
+
+**O custo exato, medido:** 184 internações em 2023 — 0,0014% do total nacional.
+É a diferença entre o total do TabNet (13.215.017) e o do nosso painel
+(13.214.833).
+
+## D10 — Isolamento entra como atributo, e é calculado ano a ano
+
+**Decisão:** `dist_uti_km` é a distância haversine, a partir do centroide de
+área, até o município mais próximo com `tem_uti = 1` — **recalculada em cada um
+dos 10 anos**.
+
+**Por quê o atributo existe:** sem ele, todos os preditores são proxies de
+tamanho (população, PIB, estabelecimentos e internações correlacionam acima de
+0,9 entre si e ~0,50 com o alvo). O modelo tem uma única informação para dar,
+*"este município é grande"*, e o **erro** dele fica ininterpretável: um falso
+positivo pode ser um município desassistido no Amazonas ou um subúrbio a 15 km
+de uma capital — situações opostas, idênticas na base.
+
+A validação empírica é ρ(distância, população) = **0,078** entre os municípios
+sem UTI. É a única variável do projeto que não é escala disfarçada.
+
+**Por quê ano a ano e não uma vez só:** leitos de UTI abrem e fecham. Entre 2019
+e 2021 o Brasil ganhou 30 mil leitos COVID e a distância mediana caiu de 41,3 km
+para 35,4 km. Congelar num único ano apagaria esse movimento, que é um achado.
+
+**Alternativa descartada:** distância rodoviária ou fluvial real. Não há fonte
+pública aberta de matriz de tempo de deslocamento entre os 5.570 municípios. A
+limitação está declarada em `docs/01`, seção 11.
+
+## D11 — Os cortes do `vazio_assistencial` são arbitrários, e explícitos
+
+**Decisão:** `vazio_assistencial = 1` quando o município não tem UTI **e** tem
+≥ 20 mil habitantes **e** está a ≥ 100 km do leito mais próximo.
+
+**Por quê os dois cortes juntos:** isolado sozinho não basta — um município
+isolado de 800 habitantes não "deveria" ter UTI. Populoso sozinho também não —
+um município de 50 mil a 20 km de uma capital está bem servido. O vazio é a
+**interseção**.
+
+**Por quê 20 mil e 100 km:** são ordens de grandeza usadas na discussão de
+regionalização do SUS, não constantes derivadas dos dados. Estão escritas no
+código, e não escondidas, **justamente para poderem ser questionadas** — mudar
+os cortes muda quantos municípios entram, e essa sensibilidade deve ser testada.

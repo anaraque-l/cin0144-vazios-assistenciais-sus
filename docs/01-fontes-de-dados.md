@@ -30,13 +30,22 @@ analítica trabalha com os 5.570.
 
 | | |
 |---|---|
-| **Endpoint** | `https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37,513,517,525,543/p/{ano}` |
+| **Endpoint** | `https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37,498,513,517,6575,525/p/{ano}` |
 | **Documentação** | https://sidra.ibge.gov.br/tabela/5938 |
 | **Cobertura** | 2002–2023, todos os municípios |
-| **Variáveis usadas** | 37 = PIB a preços correntes · 513 = VAB agropecuária · 517 = VAB indústria · 525 = VAB serviços (exceto administração pública) · 543 = VAB administração pública |
+| **Variáveis usadas** | 37 = PIB a preços correntes · 498 = VAB total · 513 = VAB agropecuária · 517 = VAB indústria · **6575 = VAB serviços** (exclusive administração pública) · **525 = VAB administração**, defesa, educação e saúde públicas |
 | **Unidade** | Mil reais correntes |
 
-A consulta é quebrada **ano a ano**: 5.570 municípios × 5 variáveis × 10 anos
+⚠️ **Os códigos não seguem a intuição, e isso já custou um erro.** `525` é
+administração pública, **não** serviços; serviços é `6575`. E `543` é
+*impostos líquidos de subsídios*, não administração pública. Conferido em
+`https://servicodados.ibge.gov.br/api/v3/agregados/5938/metadados`.
+
+⚠️ **Em 2022 e 2023 o IBGE publicou apenas o PIB total** — a abertura setorial
+ainda não saiu. É uma lacuna real da fonte, e é a origem dos 20% de valores
+ausentes nas colunas `pct_vab_*`, tratada na EDA como ausência estruturada.
+
+A consulta é quebrada **ano a ano**: 5.570 municípios × 6 variáveis × 10 anos
 estoura o limite de células por requisição do SIDRA (devolve HTTP 400).
 
 ## 3. IBGE — SIDRA, tabela 1301 (Área territorial)
@@ -128,7 +137,27 @@ local de **residência**. Usamos residência. Ver seção 4 do
 Sete ou mais consultas de pré-natal é o parâmetro do Ministério da Saúde para
 pré-natal adequado.
 
-## 11. Portaria SAS/MS nº 221, de 17/04/2008
+## 11. IBGE — API de Malhas Territoriais
+
+| | |
+|---|---|
+| **Endpoint** | `https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo+json&intrarregiao=municipio&qualidade=minima` |
+| **Documentação** | https://servicodados.ibge.gov.br/api/docs/malhas |
+| **Formato** | GeoJSON, ~3,6 MB, sem autenticação |
+| **Usado para** | Centroide de área de cada município → `dist_uti_km` |
+
+Devolve os 5.570 polígonos municipais numa única requisição. O centroide é
+calculado pela fórmula do shoelace (média ponderada pela área, não média dos
+vértices), e a distância entre municípios é haversine — sobre a esfera, não no
+plano, o que importa numa escala de 4.300 km de norte a sul.
+
+**Limitação declarada:** o centroide de área não é onde a população mora, e a
+distância em linha reta não é a distância percorrida. Na Amazônia os dois erros
+se somam: o deslocamento é fluvial e leva dias, não a hora que 175 km em linha
+reta sugerem. A medida serve para comparar ordens de grandeza (30 km contra 400
+km), não para estimar tempo de viagem. Ver `src/geografia.py`.
+
+## 12. Portaria SAS/MS nº 221, de 17/04/2008
 
 | | |
 |---|---|
@@ -153,8 +182,8 @@ baixam. Esse caminho dá a CID exata de cada internação.
 
 Optamos pelo TabNet porque:
 
-1. **Volume.** O SIH tem ~11 milhões de internações por ano. Dez anos de todas
-   as UFs passam de 30 GB. Para uma tabela agregada por município × ano, isso é
+1. **Volume.** O SIH registrou **13,2 milhões** de internações em 2023 (número
+   conferido — ver `docs/04`, S0). Dez anos de todas as UFs passam de 30 GB. Para uma tabela agregada por município × ano, isso é
    trabalho computacional sem retorno analítico.
 2. **Disponibilidade.** O FTP do DATASUS cai com frequência; o TabNet é a
    interface oficial e estável.

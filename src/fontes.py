@@ -73,6 +73,18 @@ FONTES: dict[str, Fonte] = {
         licenca="Dados abertos IBGE.",
         observacao="Area em km2. Fixa no periodo -- usada apenas para calcular densidade.",
     ),
+    "ibge_malhas": Fonte(
+        apelido="ibge_malhas",
+        orgao="IBGE",
+        nome="API de Malhas Territoriais - poligonos municipais",
+        url_consulta="https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR"
+        "?formato=application/vnd.geo+json&intrarregiao=municipio&qualidade=minima",
+        url_documentacao="https://servicodados.ibge.gov.br/api/docs/malhas",
+        licenca="Dados abertos IBGE.",
+        observacao="Os 5.570 poligonos municipais em ~3,6 MB (qualidade minima). Usada para "
+        "calcular o centroide de area de cada municipio e, dele, a distancia ate o servico "
+        "mais proximo. Ver src/geografia.py.",
+    ),
     "populacao_tcu": Fonte(
         apelido="populacao_tcu",
         orgao="IBGE / DATASUS",

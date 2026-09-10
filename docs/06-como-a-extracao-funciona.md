@@ -32,8 +32,9 @@ Então a extração é: **montar o POST → receber HTML → parsear a tabela �
 DataFrame → gravar CSV nosso**. Os únicos CSV do projeto são os que nós
 escrevemos (`data/interim/` e `data/processed/`).
 
-O IBGE é diferente e mais simples: a API do SIDRA e a de Localidades devolvem
-**JSON**, sem autenticação. Ver `src/ibge.py`.
+O IBGE é diferente e mais simples: as APIs de SIDRA, de Localidades e de
+Malhas devolvem **JSON** (a de Malhas, GeoJSON), sem autenticação. Ver
+`src/ibge.py` e `src/geografia.py`.
 
 ## 3. Como uma consulta ao TabNet é montada
 

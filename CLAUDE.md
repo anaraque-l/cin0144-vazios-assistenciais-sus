@@ -71,6 +71,8 @@ SIH, SIM e SINASC têm versão "por local de ocorrência". Nunca use. Ver `docs/
 - **DATASUS usa código IBGE de 6 dígitos**; o IBGE usa 7. A diferença é o dígito
   verificador. Junção sempre por `cod_ibge6`, exceto SIDRA, que usa 7.
 - **SIDRA devolve HTTP 400** se a consulta tiver células demais. Quebre por ano.
+- **A malha do IBGE devolve os 5.570 polígonos numa requisição** de 3,6 MB
+  (`qualidade=minima`). O centroide é por área (shoelace), não média de vértices.
 - **`ftp.datasus.gov.br` é instável** e estava inacessível em 10/09/2026. Não
   escreva pipeline que dependa dele sem fallback.
 
