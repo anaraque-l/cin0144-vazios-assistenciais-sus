@@ -1,0 +1,60 @@
+Analise de sensibilidade - 55700 linhas, 5570 municipios
+Protocolo fixo: floresta aleatoria (200 arvores), 5 folds, semente 42.
+Taxa de positivos em tem_uti: 0.1082
+
+============================================================================
+S1  PARTICAO - aleatoria x agrupada por municipio
+============================================================================
+  docs/04 dizia: 'o modelo memoriza o municipio e a metrica sobe'.
+  Aqui esta o quanto.
+
+    StratifiedKFold aleatorio        AUC 0.9965 (+/-0.0011)
+    StratifiedGroupKFold p/ municipio AUC 0.9773 (+/-0.0043)
+    otimismo da particao aleatoria:  +0.0192
+
+  Por que o efeito e este tamanho: 85,3%% dos municipios NUNCA tiveram
+  UTI em 10 anos e 8,7%% sempre tiveram. Com particao aleatoria, o mesmo
+  municipio cai no treino e no teste em anos diferentes - o modelo so
+  precisa reconhece-lo e repetir a resposta.
+
+============================================================================
+S2  VAZAMENTO - quanto vale cada atributo proibido
+============================================================================
+  AUC com particao AGRUPADA (a honesta), alvo tem_uti.
+
+    conjunto honesto         AUC 0.9773   (referencia)
+    + leitos_uti             AUC 1.0000   +0.0227  | e o proprio alvo, em contagem
+    + leitos_complementares  AUC 0.9965   +0.0192  | inclui os leitos de UTI
+    + leitos_internacao      AUC 0.9841   +0.0068  | quem tem UTI tem leito de internacao
+    + estab_hospital         AUC 0.9775   +0.0002  | quase determina o alvo
+    + internacoes_total      AUC 0.9772   -0.0001  | circular: municipio com UTI interna mais PORQUE tem UTI
+    + dist_uti_km            AUC 1.0000   +0.0227  | VALE ZERO exatamente quando tem_uti=1 - vazamento perfeito
+    + vazio_assistencial     AUC 0.9777   +0.0004  | e definido a partir de tem_uti
+
+============================================================================
+S3  BALANCEAMENTO - com 10,8%% de positivos, class_weight ajuda?
+============================================================================
+  A pergunta importa porque 'a base e desbalanceada, logo balanceie'
+  e exatamente o tipo de passo que se da sem medir.
+
+                             AUC      F1       recall   precisao
+    sem class_weight         0.9773   0.8029   0.7493   0.8656
+    class_weight=balanced    0.9770   0.8040   0.7860   0.8233
+    diferenca                -0.0003  +0.0011  +0.0367  -0.0423
+
+  Aqui esta a razao de medir em vez de supor: a AUC mal se move, porque
+  e insensivel ao limiar - class_weight reordena pouco. O efeito, se
+  existir, tem de aparecer em RECALL da classe positiva, que e o que
+  interessa: encontrar o municipio que deveria ter UTI e nao tem.
+  A decisao de balancear se toma por recall e F1, nunca por AUC.
+
+============================================================================
+S4  PANDEMIA - excluir 2020-2021 do treino melhora ou piora?
+============================================================================
+  Os leitos COVID levaram o total nacional de 46 mil a 76 mil. docs/04
+  argumenta que excluir e pior porque parte dos leitos permaneceu.
+
+    base inteira (2014-2023)   AUC 0.9773 (+/-0.0043)  n=55700
+    sem 2020-2021              AUC 0.9808 (+/-0.0053)  n=44560
+
+Tabela S2 gravada em reports\sensibilidades-vazamento.csv

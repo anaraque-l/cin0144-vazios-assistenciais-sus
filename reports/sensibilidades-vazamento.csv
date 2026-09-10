@@ -1,0 +1,9 @@
+atributo,auc,delta,motivo
+conjunto honesto,0.9772926282340073,0.0,
+leitos_uti,1.0,0.02270737176599269,"e o proprio alvo, em contagem"
+leitos_complementares,0.9965169055571692,0.019224277323161898,inclui os leitos de UTI
+leitos_internacao,0.9840751075313212,0.006782479297313904,quem tem UTI tem leito de internacao
+estab_hospital,0.9774570340325646,0.00016440579855725446,quase determina o alvo
+internacoes_total,0.977225738666078,-6.68895679293291e-05,circular: municipio com UTI interna mais PORQUE tem UTI
+dist_uti_km,0.9999817301963899,0.022689101962382607,VALE ZERO exatamente quando tem_uti=1 - vazamento perfeito
+vazio_assistencial,0.9777136097113118,0.0004209814773045162,e definido a partir de tem_uti

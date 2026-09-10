@@ -40,7 +40,7 @@ pré-processamento são **escritas**, não aplicadas.
 A lista canônica é `src/fontes.py` (`VAZAMENTO_ETAPA1`/`VAZAMENTO_ETAPA2`) —
 `src/gerar_dicionario.py` e `notebooks/01-eda.ipynb` validam contra ela com
 `assert`. Ao mexer em qualquer lista de atributos, edite `fontes.py` primeiro
-e releia `docs/04`, seção S2. Resumo (12 + 9 colunas, não repita esta lista de
+e releia `docs/04`, seção S2. Resumo (13 + 9 colunas, não repita esta lista de
 cabeça em outro lugar do repositório — ela já divergiu entre CLAUDE.md, o
 notebook e `docs/04` uma vez):
 
@@ -48,7 +48,12 @@ notebook e `docs/04` uma vez):
   `leitos_internacao`, `leitos_internacao_sus`, `leitos_por_mil_hab`,
   `leitos_sus_por_mil_hab`, `estab_hospital`, `internacoes_total`,
   `tx_internacao_por_mil`, `equip_manut_vida`, `dist_hospital_km`,
-  `vazio_assistencial`.
+  `vazio_assistencial` — **nem `dist_uti_km`**, que vale **exatamente 0 quando
+  `tem_uti = 1`** e nunca 0 quando é 0: a condição `== 0` *é* o alvo, e sozinha
+  entrega AUC 1,0 (medido em `docs/04`, M-S2). Para modelar isolamento, use
+  `dist_uti_externa_km`, que ignora o próprio município. Na EDA descritiva
+  `dist_uti_km` continua válido **desde que filtrado a quem não tem UTI**, que é
+  como o notebook já o usa.
 - Etapa 2 (`taxa_icsap`) não pode usar `internacoes_icsap`, `internacoes_total`,
   `icsap_por_10mil`, `taxa_icsap_menor5`, `taxa_icsap_idoso`,
   `intern_menor5_total`, `intern_menor5_icsap`, `intern_idoso_total`,
