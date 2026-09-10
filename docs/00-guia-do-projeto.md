@@ -56,8 +56,11 @@ oficial — está em [`03-icsap-operacionalizacao.md`](03-icsap-operacionalizaca
 - **Unidade de análise:** município × ano
 - **Período:** 2014–2023 (10 anos)
 - **Instâncias:** 55.700 (5.570 municípios × 10 anos)
-- **Atributos:** 70 colunas, das quais **47 são candidatas a preditor**
-  (9 são proibidas só por vazamento, 3 são identificadores, 11 são alvo ou componente de alvo)
+- **Atributos:** 70 colunas, das quais **45 são candidatas a preditor**
+  (11 são proibidas só por vazamento, 3 são identificadores, 11 são alvo ou
+  componente de alvo). Cresceu de 9 para 11 vazamentos nesta revisão:
+  `dist_hospital_km` e `vazio_assistencial` também são circulares por
+  construção — ver `docs/04`, S2.
 - **Formato:** `data/processed/municipio_ano.csv`
 
 Tudo vem de fonte **governamental e aberta**: IBGE (malha municipal, PIB, área,
@@ -100,15 +103,15 @@ retorno por minuto lido:
 
 | # | Arquivo | Linhas | Por que ler | Prioridade |
 |---|---|---:|---|---|
-| 1 | `build_dataset.py` | 233 | **Onde os dois alvos nascem** e onde cada taxa é definida. É o arquivo que responde "o que exatamente é `taxa_icsap`?" | 🔴 todo mundo |
-| 2 | `fontes.py` | 180 | Catálogo, sem lógica. Responde "de onde veio esse número?" e é onde se muda período e definição de UTI | 🔴 todo mundo |
+| 1 | `build_dataset.py` | 342 | **Onde os dois alvos nascem** e onde cada taxa é definida. É o arquivo que responde "o que exatamente é `taxa_icsap`?" | 🔴 todo mundo |
+| 2 | `fontes.py` | 297 | Catálogo, sem lógica de negócio (exceto o mapeamento de código de equipe). Responde "de onde veio esse número?" e "o que é vazamento?" — inclui `VAZAMENTO_ETAPA1`/`VAZAMENTO_ETAPA2`, a fonte única da lista de vazamento | 🔴 todo mundo |
 | 3 | `icsap.py` | 128 | O mapeamento portaria → TabNet, com a divergência declarada grupo a grupo. **É o que a banca vai questionar** | 🔴 todo mundo |
-| 3b | `geografia.py` | 195 | Centroide e haversine. Explica **por que** o isolamento entrou e qual a limitação dele | 🔴 todo mundo |
-| 4 | `notebooks/01-eda.ipynb` | 23 células | A entrega em si | 🔴 todo mundo |
-| 5 | `ingestao.py` | 362 | Uma função por fonte, todas com a mesma forma. Leia **uma** (`leitos_uti`) e você leu as nove | 🟡 quem for mexer em fonte |
-| 6 | `ibge.py` | 169 | APIs REST comuns. O único ponto não óbvio são os códigos de variável do SIDRA | 🟡 quem for mexer em fonte |
+| 3b | `geografia.py` | 216 | Centroide e haversine. Explica **por que** o isolamento entrou e qual a limitação dele | 🔴 todo mundo |
+| 4 | `notebooks/01-eda.ipynb` | 60 células | A entrega em si | 🔴 todo mundo |
+| 5 | `ingestao.py` | 543 | Uma função por fonte, todas com a mesma forma. Leia **uma** (`leitos_uti`) e você leu quase todas | 🟡 quem for mexer em fonte |
+| 6 | `ibge.py` | 221 | APIs REST comuns. O único ponto não óbvio são os códigos de variável do SIDRA | 🟡 quem for mexer em fonte |
 | 7 | `tabnet.py` | 314 | Encanamento: monta POST, parseia HTML. **Funciona e não precisa ser tocado** | 🟢 curiosidade |
-| 8 | `gerar_dicionario.py` | 120 | Gera um `.md`. Só descrição de coluna | 🟢 se faltar coluna |
+| 8 | `gerar_dicionario.py` | 173 | Gera um `.md`. Descrição de coluna + validação contra `fontes.VAZAMENTO_ETAPA1/2` | 🟢 se faltar coluna |
 
 **Atalho para quem tem 20 minutos:** leia `build_dataset.py` inteiro, os
 comentários `CONCEITO`/`INTERPRETAÇÃO` do notebook, e a tupla `MAPA` de

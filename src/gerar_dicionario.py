@@ -93,6 +93,10 @@ CATALOGO: dict[str, tuple[str, str, str, str, str]] = {
 }
 
 
+def _papel(coluna: str) -> str:
+    return CATALOGO[coluna][3]
+
+
 def main() -> None:
     caminho = F.DIR_PROCESSED / "municipio_ano.csv"
     df = pd.read_csv(caminho)
@@ -100,6 +104,32 @@ def main() -> None:
     faltando = set(df.columns) ^ set(CATALOGO)
     if faltando:
         raise SystemExit(f"catalogo dessincronizado da base: {sorted(faltando)}")
+
+    # Guarda contra o proprio bug que motivou esta funcao: o CATALOGO e escrito
+    # a mao e rotula coluna a coluna, mas quem realmente usa "o que e proibido
+    # como preditor" e o notebook (via F.VAZAMENTO_ETAPA1/2, a fonte unica).
+    # F.VAZAMENTO_ETAPA1/2 e mais amplo que o rotulo "VAZAMENTO Etapa N" do
+    # CATALOGO de proposito -- inclui tambem o alvo e seus componentes diretos
+    # (ex.: `leitos_uti`, rotulado aqui como "ALVO 1 (origem)"), que sao
+    # obviamente proibidos como preditor mas nao levam o rotulo "VAZAMENTO".
+    # Por isso o teste e de SUBCONJUNTO, nao igualdade: se alguem marcar uma
+    # coluna nova como "VAZAMENTO Etapa N" aqui e esquecer de leva-la para
+    # fontes.py, este assert falha antes que o notebook fique desatualizado de
+    # novo -- foi exatamente essa dessincronia (`equip_manut_vida` e
+    # `dist_hospital_km` marcados aqui e ausentes de toda a Entrega 1) que a
+    # auditoria encontrou.
+    marcadas_e1 = {c for c in CATALOGO if _papel(c) == "VAZAMENTO Etapa 1"}
+    marcadas_e2 = {c for c in CATALOGO if _papel(c) == "VAZAMENTO Etapa 2"}
+    if not marcadas_e1 <= F.VAZAMENTO_ETAPA1:
+        raise SystemExit(
+            f"CATALOGO marca como VAZAMENTO Etapa 1 colunas ausentes de "
+            f"fontes.VAZAMENTO_ETAPA1: {marcadas_e1 - F.VAZAMENTO_ETAPA1}"
+        )
+    if not marcadas_e2 <= F.VAZAMENTO_ETAPA2:
+        raise SystemExit(
+            f"CATALOGO marca como VAZAMENTO Etapa 2 colunas ausentes de "
+            f"fontes.VAZAMENTO_ETAPA2: {marcadas_e2 - F.VAZAMENTO_ETAPA2}"
+        )
 
     linhas = []
     for coluna in df.columns:

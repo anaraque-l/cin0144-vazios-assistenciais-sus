@@ -261,3 +261,45 @@ def codigos_equipes(ano: int) -> tuple[set[str], set[str]]:
 # publicar a cobertura oficial -- por isso adotamos a mesma, para que o numero
 # seja comparavel ao indicador publicado.
 POPULACAO_POR_EQUIPE_ESF = 3_450
+
+# --- Vazamento de atributos --------------------------------------------------
+# FONTE UNICA DE VERDADE desta lista. src/gerar_dicionario.py e
+# notebooks/01-eda.ipynb ambos validam contra estas constantes (com um assert)
+# em vez de repetir a lista -- e o que aconteceu antes (a lista vivia
+# duplicada em CLAUDE.md, no notebook e em docs/04, e as tres divergiram
+# quando `dist_hospital_km` e `equip_manut_vida` foram identificados como
+# vazamento e a correcao so entrou aqui). Ver docs/04, secao S2.
+#
+# Etapa 1 (`tem_uti`): qualquer atributo que meca infraestrutura ou uso
+# HOSPITALAR. Municipio com UTI tem hospital e interna mais -- a seta causal
+# aponta do alvo para o atributo, entao usar esses atributos e circular.
+VAZAMENTO_ETAPA1 = frozenset({
+    "leitos_uti",              # e o alvo: tem_uti = (leitos_uti > 0)
+    "leitos_complementares",   # contem leitos_uti
+    "leitos_internacao",       # quem tem UTI tem hospital -- quase deterministico
+    "leitos_internacao_sus",
+    "leitos_por_mil_hab",
+    "leitos_sus_por_mil_hab",
+    "estab_hospital",          # UTI so existe dentro de hospital
+    "internacoes_total",       # circular: UTI interna mais PORQUE tem UTI
+    "tx_internacao_por_mil",
+    "equip_manut_vida",        # respirador/monitor: rho=0,528 com tem_uti (mediana 5 vs 300)
+    "dist_hospital_km",        # deriva de leitos_internacao (ja vazamento); rho=-0,25
+    "vazio_assistencial",      # e DEFINIDO usando tem_uti==0 (build_dataset.py) -- circular
+})
+
+# Etapa 2 (`taxa_icsap`): o numerador, o denominador, a mesma taxa com outro
+# denominador, e os mesmos tres papeis restritos por faixa etaria (menor de 5 /
+# idoso) -- taxa_icsap_menor5/idoso sao o MESMO alvo numa subpopulacao
+# (rho = 0,65 e 0,84 com taxa_icsap).
+VAZAMENTO_ETAPA2 = frozenset({
+    "internacoes_icsap",
+    "internacoes_total",
+    "icsap_por_10mil",
+    "taxa_icsap_menor5",
+    "taxa_icsap_idoso",
+    "intern_menor5_total",
+    "intern_menor5_icsap",
+    "intern_idoso_total",
+    "intern_idoso_icsap",
+})
