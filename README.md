@@ -5,8 +5,12 @@ Entrega 1 — Análise Exploratória de Dados
 
 ---
 
-Onde falta infraestrutura de saúde no Brasil, e onde ela existe mas a atenção
-primária não está funcionando.
+## Tema
+
+> Prever, a partir de dados públicos do IBGE e do DATASUS, se um município
+> brasileiro tem leito de UTI e qual fatia de suas internações seria evitável
+> pela atenção primária — usando os **erros** do modelo para mapear os vazios
+> assistenciais do SUS.
 
 | | Pergunta | Tarefa | Alvo |
 |---|---|---|---|
