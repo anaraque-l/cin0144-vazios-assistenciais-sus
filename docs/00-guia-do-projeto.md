@@ -82,6 +82,32 @@ O fluxo é uma linha reta:
 fontes públicas -> data/raw (congelado) -> data/interim -> data/processed -> notebook
 ```
 
+### Ordem de leitura — o que priorizar
+
+São ~1.500 linhas de Python, mas **elas não têm o mesmo peso**. Em ordem de
+retorno por minuto lido:
+
+| # | Arquivo | Linhas | Por que ler | Prioridade |
+|---|---|---:|---|---|
+| 1 | `build_dataset.py` | 233 | **Onde os dois alvos nascem** e onde cada taxa é definida. É o arquivo que responde "o que exatamente é `taxa_icsap`?" | 🔴 todo mundo |
+| 2 | `fontes.py` | 180 | Catálogo, sem lógica. Responde "de onde veio esse número?" e é onde se muda período e definição de UTI | 🔴 todo mundo |
+| 3 | `icsap.py` | 128 | O mapeamento portaria → TabNet, com a divergência declarada grupo a grupo. **É o que a banca vai questionar** | 🔴 todo mundo |
+| 4 | `notebooks/01-eda.ipynb` | 23 células | A entrega em si | 🔴 todo mundo |
+| 5 | `ingestao.py` | 362 | Uma função por fonte, todas com a mesma forma. Leia **uma** (`leitos_uti`) e você leu as nove | 🟡 quem for mexer em fonte |
+| 6 | `ibge.py` | 169 | APIs REST comuns. O único ponto não óbvio são os códigos de variável do SIDRA | 🟡 quem for mexer em fonte |
+| 7 | `tabnet.py` | 314 | Encanamento: monta POST, parseia HTML. **Funciona e não precisa ser tocado** | 🟢 curiosidade |
+| 8 | `gerar_dicionario.py` | 120 | Gera um `.md`. Só descrição de coluna | 🟢 se faltar coluna |
+
+**Atalho para quem tem 20 minutos:** leia `build_dataset.py` inteiro, os
+comentários `CONCEITO`/`INTERPRETAÇÃO` do notebook, e a tupla `MAPA` de
+`icsap.py`. Isso cobre tudo que decide o resultado.
+
+**O que dá para ignorar com tranquilidade:** o parsing de HTML em `tabnet.py`.
+É código chato que resolve um site de 2003 — está explicado em
+[`06-como-a-extracao-funciona.md`](06-como-a-extracao-funciona.md) se alguém
+perguntar, mas ninguém precisa entender regex de `<TD>` sem fechamento para
+defender o trabalho.
+
 ### Por que existe `data/raw` versionado
 
 Portais de governo mudam de lugar, tiram base do ar e revisam número

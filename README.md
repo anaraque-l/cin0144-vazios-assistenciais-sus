@@ -50,6 +50,7 @@ primeira execução tudo vem do cache — não depende mais de rede.
 | [`docs/03-icsap-operacionalizacao.md`](docs/03-icsap-operacionalizacao.md) | Como a Lista Brasileira de ICSAP virou número, e onde diverge. |
 | [`docs/04-melhorias-tradeoffs-sensibilidades.md`](docs/04-melhorias-tradeoffs-sensibilidades.md) | Checklist antes de entregar · trade-offs · o que melhorar depois. |
 | [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md) | Cada coluna: tipo, origem, unidade, papel na modelagem. |
+| [`docs/06-como-a-extracao-funciona.md`](docs/06-como-a-extracao-funciona.md) | De onde veio cada número e **como auditar um valor** até o HTML bruto. |
 | [`docs/relatorio-entrega1.md`](docs/relatorio-entrega1.md) | **O relatório da Entrega 1** — descrição da base, EDA, diagnóstico e hipóteses. |
 
 ## Estrutura
