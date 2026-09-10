@@ -85,6 +85,17 @@ FONTES: dict[str, Fonte] = {
         "calcular o centroide de area de cada municipio e, dele, a distancia ate o servico "
         "mais proximo. Ver src/geografia.py.",
     ),
+    "sidra_saneamento": Fonte(
+        apelido="sidra_saneamento",
+        orgao="IBGE",
+        nome="Censo Demografico 2022 - saneamento (tabelas SIDRA 6803, 6805, 6892)",
+        url_consulta="https://apisidra.ibge.gov.br/values/t/6805/n6/all/v/1000381/p/2022/c11558/46290",
+        url_documentacao="https://sidra.ibge.gov.br/tabela/6805",
+        licenca="Dados abertos IBGE.",
+        observacao="Percentual de domicilios por tipo de esgotamento (6805), abastecimento de "
+        "agua (6803) e destino do lixo (6892). A variavel 1000381 ja vem em percentual. "
+        "ATENCAO: o Censo 2022 e uma foto unica -- estas colunas sao constantes no painel.",
+    ),
     "populacao_tcu": Fonte(
         apelido="populacao_tcu",
         orgao="IBGE / DATASUS",
@@ -125,6 +136,27 @@ FONTES: dict[str, Fonte] = {
         licenca="Dados abertos do Ministerio da Saude.",
         observacao="Contagem de estabelecimentos por tipo de unidade (posto, centro de saude, "
         "hospital geral, UPA, etc.).",
+    ),
+    "cnes_equipes": Fonte(
+        apelido="cnes_equipes",
+        orgao="Ministerio da Saude / DATASUS",
+        nome="CNES - Equipes de Saude",
+        url_consulta="http://tabnet.datasus.gov.br/cgi/tabcgi.exe?cnes/cnv/equipebr.def",
+        url_documentacao="https://cnes.datasus.gov.br/",
+        licenca="Dados abertos do Ministerio da Saude.",
+        observacao="Equipes cadastradas por municipio e tipo (61 tipos), de Abr/2007 em diante. "
+        "E a via para medir cobertura de Estrategia Saude da Familia sem depender do e-Gestor AB, "
+        "cuja interface JSF nao tem API.",
+    ),
+    "cnes_equipamentos": Fonte(
+        apelido="cnes_equipamentos",
+        orgao="Ministerio da Saude / DATASUS",
+        nome="CNES - Recursos Fisicos - Equipamentos",
+        url_consulta="http://tabnet.datasus.gov.br/cgi/tabcgi.exe?cnes/cnv/equipobr.def",
+        url_documentacao="https://cnes.datasus.gov.br/",
+        licenca="Dados abertos do Ministerio da Saude.",
+        observacao="Equipamentos por grupo (diagnostico por imagem, metodos opticos, "
+        "manutencao da vida, etc.) por municipio.",
     ),
     "sih_morbidade_residencia": Fonte(
         apelido="sih_morbidade_residencia",
@@ -171,6 +203,8 @@ FONTES: dict[str, Fonte] = {
 DEF_LEITOS_UTI = "cnes/cnv/leiutibr.def"
 DEF_LEITOS_INTERNACAO = "cnes/cnv/leiintbr.def"
 DEF_ESTABELECIMENTOS = "cnes/cnv/estabbr.def"
+DEF_EQUIPES = "cnes/cnv/equipebr.def"
+DEF_EQUIPAMENTOS = "cnes/cnv/equipobr.def"
 DEF_SIH_RESIDENCIA = "sih/cnv/nrbr.def"
 DEF_SIM = "sim/cnv/obt10br.def"
 DEF_SINASC = "sinasc/cnv/nvbr.def"
@@ -190,3 +224,40 @@ LEITOS_UTI = {
     "UTI coronariana tipo II -UCO tipo II",
     "UTI coronariana tipo III - UCO tipo III",
 }
+
+# --- Tipos de equipe que contam como Estrategia Saude da Familia -------------
+# ATENCAO: o CNES **recodificou a tipologia de equipes entre 2019 e 2020**.
+# Ate 2019 a ESF era o codigo 01, e a ESF com saude bucal (que tambem e ESF)
+# vinha nos codigos 02 e 03. A partir de 2020 a ESF passou a ser o codigo 70, e
+# a saude bucal virou uma equipe SEPARADA (codigo 71) -- somar 70+71 contaria a
+# mesma unidade duas vezes.
+#
+# Sem esse tratamento a serie despenca de ~42 mil equipes em 2019 para ~300 em
+# 2020, o que seria lido como colapso da atencao primaria quando e apenas
+# mudanca de cadastro. E o tipo de armadilha que so aparece quando se confere o
+# numero contra a realidade (o Brasil tem ~50 mil equipes de ESF).
+ANO_NOVA_CODIFICACAO_EQUIPES = 2020
+
+# Regime ate 2019: ESF, ESF com saude bucal M1/M2, ribeirinha e fluvial.
+CODIGOS_ESF_ANTIGO = {"01", "02", "03", "12", "13", "14", "15"}
+# Regime de 2020 em diante: apenas o codigo 70. O 71 (ESB) e equipe de saude
+# bucal autonoma e nao entra, sob pena de dupla contagem.
+CODIGOS_ESF_NOVO = {"70"}
+
+# Equipe de Atencao Basica / Atencao Primaria: modelo alternativo a ESF.
+CODIGOS_EAB_ANTIGO = {"16", "17", "18", "19", "20", "21"}
+CODIGOS_EAB_NOVO = {"76"}
+
+
+def codigos_equipes(ano: int) -> tuple[set[str], set[str]]:
+    """Devolve (codigos de ESF, codigos de atencao basica nao-ESF) para o ano."""
+    if ano >= ANO_NOVA_CODIFICACAO_EQUIPES:
+        return CODIGOS_ESF_NOVO, CODIGOS_EAB_NOVO
+    return CODIGOS_ESF_ANTIGO, CODIGOS_EAB_ANTIGO
+
+
+# Parametro do Ministerio da Saude (Portaria 2.436/2017): cada equipe de Saude
+# da Familia cobre ate 3.450 pessoas. E a formula que o e-Gestor AB usa para
+# publicar a cobertura oficial -- por isso adotamos a mesma, para que o numero
+# seja comparavel ao indicador publicado.
+POPULACAO_POR_EQUIPE_ESF = 3_450

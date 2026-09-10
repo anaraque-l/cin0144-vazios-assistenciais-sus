@@ -167,3 +167,55 @@ def area_territorial() -> pd.DataFrame:
         .max()
         .rename(columns={"valor": "area_km2"})
     )
+
+
+def sidra_classificado(
+    tabela: int, variavel: str, periodo: str, classificacao: int, categoria: int
+) -> pd.DataFrame:
+    """Consulta uma tabela do SIDRA recortada por uma categoria de classificacao.
+
+    Varias tabelas do Censo sao cubos: a mesma variavel aparece repartida por uma
+    *classificacao* (tipo de esgotamento, destino do lixo). A sintaxe da API para
+    fixar uma categoria e `/c<classificacao>/<categoria>`.
+    """
+    url = (
+        f"https://apisidra.ibge.gov.br/values/t/{tabela}/n6/all"
+        f"/v/{variavel}/p/{periodo}/c{classificacao}/{categoria}"
+    )
+    apelido = f"sidra_{tabela}_v{variavel}_p{periodo}_c{classificacao}-{categoria}.json"
+    registros = json.loads(_baixar(url, DIR_IBGE / apelido).decode("utf-8"))
+    corpo = pd.DataFrame(registros[1:])
+    return pd.DataFrame(
+        {
+            "cod_ibge7": corpo["D1C"].astype(int),
+            "valor": pd.to_numeric(corpo["V"], errors="coerce"),
+        }
+    )
+
+
+def saneamento_censo2022() -> pd.DataFrame:
+    """Cobertura de saneamento por municipio, Censo 2022 (em percentual).
+
+    CONCEITO: **determinante social de saude**. Internacao evitavel por
+    gastroenterite nao e so falha de atencao primaria -- e tambem agua nao
+    tratada e esgoto a ceu aberto. O PIB per capita nao captura isso: municipio
+    com industria extrativa tem PIB altissimo e saneamento pessimo.
+
+    LIMITACAO declarada: o Censo 2022 e uma foto unica. Estas colunas sao
+    **constantes ao longo do painel**, como `area_km2`. Nao medem a evolucao do
+    saneamento entre 2014 e 2023 -- descrevem o municipio, nao o ano.
+    """
+    partes = {
+        # % de domicilios com esgotamento por rede geral / fossa ligada a rede
+        "pct_esgoto_rede": (6805, 11558, 46290),
+        # % com ligacao a rede geral de agua e que a utiliza
+        "pct_agua_rede": (6803, 1821, 72144),
+        # % com lixo coletado
+        "pct_lixo_coletado": (6892, 67, 2520),
+    }
+    saida = None
+    for nome, (tabela, classificacao, categoria) in partes.items():
+        pedaco = sidra_classificado(tabela, "1000381", "2022", classificacao, categoria)
+        pedaco = pedaco.rename(columns={"valor": nome})
+        saida = pedaco if saida is None else saida.merge(pedaco, on="cod_ibge7", how="outer")
+    return saida

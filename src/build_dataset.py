@@ -73,6 +73,11 @@ def montar() -> pd.DataFrame:
     # ----------------------------------------------------------------- #
     base = base.merge(_ler("pib"), on=["cod_ibge7", "ano"], how="left")
 
+    # Saneamento do Censo 2022. Chave sem `ano` de proposito: o Censo e uma foto
+    # unica, entao estas colunas sao CONSTANTES ao longo do painel -- descrevem o
+    # municipio, nao o ano. Mesma natureza de `area_km2`.
+    base = base.merge(_ler("saneamento"), on="cod_ibge7", how="left")
+
     # ----------------------------------------------------------------- #
     # 4. Oferta de servico (CNES, chave de 6 digitos)
     # ----------------------------------------------------------------- #
@@ -87,6 +92,8 @@ def montar() -> pd.DataFrame:
             "estab_total", "estab_atencao_basica", "estab_hospital",
             "estab_urgencia", "estab_apoio_diagnose", "estab_caps",
         ]),
+        ("equipes_saude", ["equipes_esf", "equipes_ab_outras"]),
+        ("equipamentos", ["equip_total", "equip_imagem", "equip_manut_vida"]),
     ]:
         base = base.merge(_ler(nome), on=["cod_ibge6", "ano"], how="left")
         base[colunas] = base[colunas].fillna(0)
@@ -96,6 +103,10 @@ def montar() -> pd.DataFrame:
     # ----------------------------------------------------------------- #
     for nome, colunas in [
         ("internacoes", ["internacoes_total", "internacoes_icsap"]),
+        ("internacoes_faixa", [
+            "intern_menor5_total", "intern_menor5_icsap",
+            "intern_idoso_total", "intern_idoso_icsap",
+        ]),
         ("obitos_infantis", ["obitos_menor1"]),
         ("nascidos_vivos", [
             "nascidos_vivos", "nasc_prenatal_7mais",
@@ -167,6 +178,62 @@ def derivar(base: pd.DataFrame) -> pd.DataFrame:
     df["estab_ab_por_10mil"] = 10_000 * df["estab_atencao_basica"] / df["populacao"]
     df["tx_internacao_por_mil"] = 1_000 * df["internacoes_total"] / df["populacao"]
 
+    # ----------------------------------------------------------------- #
+    # Cobertura da Estrategia Saude da Familia
+    # ----------------------------------------------------------------- #
+    # CONCEITO: **proxy de cobertura populacional da ESF**. Cada equipe de
+    # Saude da Familia cobre ate 3.450 pessoas (parametro do Ministerio da
+    # Saude, Portaria 2.436/2017), entao a cobertura e equipes x 3.450 /
+    # populacao, limitada a 100%.
+    # ATENCAO -- e PROXY, nao o indicador oficial. O CNES registra equipes
+    # *cadastradas*; a cobertura publicada pelo e-Gestor AB parte das equipes
+    # homologadas e custeadas, que sao menos. Nossa medida da 91,6% em 2023,
+    # acima do indicador oficial. Serve para comparar municipios entre si, nao
+    # para citar como "a cobertura de ESF do municipio X e tal".
+    # INTERPRETACAO: a medida esta SATURADA -- 90% dos municipios-ano ficam
+    # perto de 100%, e so 33 municipios nao tem nenhuma equipe em 2023. Variavel
+    # sem variancia explica pouco, e de fato a correlacao com taxa_icsap e ~0.
+    # Isso e um achado, nao um defeito do dado: no recorte municipal, cobertura
+    # de ESF ja nao discrimina quase nada no Brasil de hoje.
+    # POR QUE IMPORTA: e a variavel que *deveria* explicar a taxa_icsap melhor
+    # que qualquer outra. Se a ESF cobre o territorio, pneumonia e diabetes
+    # descompensado sao resolvidos na UBS e nao viram internacao.
+    df["cobertura_esf"] = np.where(
+        df["populacao"] > 0,
+        np.minimum(1.0, df["equipes_esf"] * F.POPULACAO_POR_EQUIPE_ESF / df["populacao"]),
+        np.nan,
+    )
+    df["equipes_ab_por_10mil"] = np.where(
+        df["populacao"] > 0,
+        10_000 * (df["equipes_esf"] + df["equipes_ab_outras"]) / df["populacao"],
+        np.nan,
+    )
+    df["equip_imagem_por_10mil"] = np.where(
+        df["populacao"] > 0, 10_000 * df["equip_imagem"] / df["populacao"], np.nan
+    )
+
+    # ----------------------------------------------------------------- #
+    # ICSAP nos dois extremos etarios
+    # ----------------------------------------------------------------- #
+    # CONCEITO: a literatura calcula ICSAP separadamente para **menores de 5
+    # anos** e **idosos**, porque as condicoes sensiveis sao diferentes em cada
+    # extremo: gastroenterite e pneumonia na infancia; diabetes e insuficiencia
+    # cardiaca na velhice.
+    # INTERPRETACAO: a taxa infantil e considerada a mais sensivel a qualidade
+    # da atencao primaria -- crianca que interna por causa evitavel e, quase
+    # sempre, crianca que nao foi vista a tempo. Se a APS explica alguma coisa,
+    # tem de explicar essa taxa antes de explicar a geral.
+    df["taxa_icsap_menor5"] = np.where(
+        df["intern_menor5_total"] > 0,
+        df["intern_menor5_icsap"] / df["intern_menor5_total"],
+        np.nan,
+    )
+    df["taxa_icsap_idoso"] = np.where(
+        df["intern_idoso_total"] > 0,
+        df["intern_idoso_icsap"] / df["intern_idoso_total"],
+        np.nan,
+    )
+
     # CONCEITO: **indicador de acesso a atencao primaria pelo pre-natal**.
     # Sete ou mais consultas e o parametro do Ministerio da Saude para pre-natal
     # adequado. E um bom termometro de APS *independente* do SIH -- por isso
@@ -227,19 +294,25 @@ ORDEM_COLUNAS = [
     # economia
     "pib_mil_reais", "pib_per_capita", "vab_total",
     "pct_vab_agropecuaria", "pct_vab_industria", "pct_vab_servicos", "pct_vab_adm_publica",
+    # determinantes sociais (Censo 2022, constantes no painel)
+    "pct_esgoto_rede", "pct_agua_rede", "pct_lixo_coletado",
     # oferta
     "estab_total", "estab_atencao_basica", "estab_hospital", "estab_urgencia",
     "estab_apoio_diagnose", "estab_caps", "estab_ab_por_10mil",
+    "equipes_esf", "equipes_ab_outras", "cobertura_esf", "equipes_ab_por_10mil",
+    "equip_total", "equip_imagem", "equip_manut_vida", "equip_imagem_por_10mil",
     "leitos_internacao", "leitos_internacao_sus", "leitos_por_mil_hab", "leitos_sus_por_mil_hab",
     "leitos_uti", "leitos_complementares",
     # isolamento geografico
     "lat", "lon", "dist_uti_km", "dist_uti_externa_km", "dist_hospital_km",
     # uso e desfecho
     "internacoes_total", "internacoes_icsap", "tx_internacao_por_mil",
+    "intern_menor5_total", "intern_menor5_icsap", "intern_idoso_total", "intern_idoso_icsap",
     "nascidos_vivos", "nasc_prenatal_7mais", "nasc_prenatal_nenhuma", "nasc_prenatal_ignorado",
     "pct_prenatal_7mais", "obitos_menor1", "tx_mort_infantil",
     # alvos
-    "tem_uti", "taxa_icsap", "icsap_por_10mil", "vazio_assistencial",
+    "tem_uti", "taxa_icsap", "taxa_icsap_menor5", "taxa_icsap_idoso",
+    "icsap_por_10mil", "vazio_assistencial",
 ]
 
 
@@ -264,3 +337,6 @@ if __name__ == "__main__":
           f"{tabela.loc[tabela.tem_uti == 0, 'dist_uti_km'].median():.0f} km")
     print(f"municipios-ano em vazio assistencial: {tabela['vazio_assistencial'].sum():,} "
           f"({tabela['vazio_assistencial'].mean():.1%})")
+    print(f"cobertura ESF media: {tabela['cobertura_esf'].mean():.1%}")
+    print(f"taxa_icsap menores de 5 anos: {tabela['taxa_icsap_menor5'].mean():.1%} | "
+          f"idosos: {tabela['taxa_icsap_idoso'].mean():.1%}")
