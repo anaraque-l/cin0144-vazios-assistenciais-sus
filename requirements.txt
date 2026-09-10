@@ -1,0 +1,13 @@
+# Projeto CIN0144 - Vazios assistenciais no SUS
+# Testado com Python 3.12.
+#
+# A ingestao usa so a biblioteca padrao (urllib) -- nao ha dependencia de
+# `requests` de proposito, para que o pipeline rode em qualquer maquina do
+# grupo sem instalacao extra alem destas.
+
+pandas>=2.0
+numpy>=1.26
+matplotlib>=3.8
+seaborn>=0.13
+scikit-learn>=1.4
+jupyterlab>=4.0

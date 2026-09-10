@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# data/ NAO entra aqui: a base congelada e versionada de proposito.
+# Ver docs/00-guia-do-projeto.md, secao "Por que existe data/raw versionado".
